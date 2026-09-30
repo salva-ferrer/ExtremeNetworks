@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Claude Code skills for Extreme Networks labs on GNS3</title>
+<style>
+@page { size: A4; margin: 20mm 18mm 22mm 18mm;
+  @bottom-left { content: "Community contribution · CC BY 4.0 · not an official Extreme Networks document";
+                 font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 7.5pt; color: #7a7f8c; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages);
+                  font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 7.5pt; color: #7a7f8c; } }
+* { box-sizing: border-box; }
+body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1f2430; font-size: 10pt; line-height: 1.5; }
+.cover { border-left: 6px solid #0b6e6e; padding: 4mm 0 4mm 6mm; margin-bottom: 8mm; }
+.cover h1 { font-size: 22pt; margin: 0 0 2mm 0; color: #0b3d4a; border: none; }
+.cover .sub { font-size: 11pt; color: #4a5160; }
+.meta { width: 100%; border-collapse: collapse; margin: 0 0 8mm 0; font-size: 9pt; }
+.meta td { padding: 1.6mm 2mm; border-bottom: 1px solid #e3e6ea; vertical-align: top; }
+.meta td.k { width: 30mm; color: #0b6e6e; font-weight: 600; }
+h2 { font-size: 15pt; color: #0b3d4a; border-bottom: 2px solid #0b6e6e; padding-bottom: 1mm;
+     margin-top: 9mm; break-after: avoid; }
+h2.skill { break-before: page; }
+h3 { font-size: 12pt; color: #0b3d4a; margin-top: 6mm; break-after: avoid; }
+h4 { font-size: 10.5pt; color: #0b3d4a; break-after: avoid; }
+p.desc { background: #eef6f6; border-left: 3px solid #0b6e6e; padding: 2mm 3mm; font-style: italic; }
+code { font-family: 'DejaVu Sans Mono', monospace; font-size: 8.3pt; background: #f2f4f6;
+       padding: 0 0.6mm; border-radius: 2px; }
+pre { background: #f5f6f8; border: 1px solid #dfe3e8; border-radius: 3px; padding: 2.5mm 3mm;
+      font-size: 8pt; line-height: 1.35; white-space: pre-wrap; word-break: break-all; break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 8pt; }
+table { border-collapse: collapse; width: 100%; margin: 3mm 0; font-size: 8.6pt; break-inside: auto; }
+th { background: #0b3d4a; color: white; text-align: left; padding: 1.5mm 2mm; }
+td { border-bottom: 1px solid #e3e6ea; padding: 1.4mm 2mm; vertical-align: top; }
+td code, th code { word-break: break-all; }
+th code { background: rgba(255,255,255,0.18); color: #ffffff; }
+tr { break-inside: avoid; }
+li { margin: 0.8mm 0; }
+a { color: #0b6e6e; text-decoration: none; }
+hr { border: none; border-top: 1px solid #dfe3e8; margin: 6mm 0; }
+</style></head><body>
+<div class="cover"><h1>Claude Code skills for Extreme Networks labs on GNS3</h1>
+<div class="sub">Switch Engine · Fabric Engine · Site Engine — guide and full skill text</div></div>
+<table class="meta">
+<tr><td class="k">Assumes</td><td>Only the IP address of a working GNS3 server (API v2)</td></tr>
+<tr><td class="k">Contents</td><td>8 skills: GNS3 API, switch templates, Switch Engine, Fabric Engine, simulated devices, Site Engine, FlexViews, product documentation</td></tr>
+<tr><td class="k">Validated on</td><td>GNS3 2.2.45 · EXOS VM 32.6.3.126 · VOSS VM 9.4.0.0 · XIQ-SE 24.2.15.5 · Linux clients</td></tr>
+<tr><td class="k">Author</td><td>Salva Ferrer (AVTN) · community contribution · 2026-09-30</td></tr>
+<tr><td class="k">License</td><td>Text CC BY 4.0 · scripts MIT</td></tr>
+</table>
+<h2 id="about-this-guide">About this guide</h2>
+<p>This document goes with the <code>extreme-gns3-skills</code> pack. It
+explains how to use the pack with Claude Code and reproduces the full
+text of every skill so a person can review it before installing. The
+scripts are only in the zip.</p>
+<p><strong>Who it is for:</strong> engineers, trainers and partners who
+build labs with Extreme Networks virtual products on GNS3 and want
+Claude Code to do the repetitive work: creating templates from the
+official GitHub images, building topologies through the API, booting and
+configuring switches through their consoles, backing up configurations,
+and bringing Site Engine into the lab.</p>
+<p><strong>The only assumption:</strong> the IP address of a working
+GNS3 server (<code>&lt;GNS3_HOST&gt;</code>) whose API port (3080) and
+console ports (5000-9999) you can reach. Everything else (templates,
+images, projects) can be created from there.</p>
+<h2 id="how-to-work-with-claude-code-on-a-lab">How to work with Claude
+Code on a lab</h2>
+<ul>
+<li><strong>Plan first, then execute.</strong> For anything beyond a
+quick check, let Claude investigate and propose a plan (Claude Code's
+<em>plan mode</em>), approve it, then let it run. Say whether it may run
+the whole plan unattended or must stop at checkpoints.</li>
+<li><strong>Shared server, explicit consent.</strong> On a GNS3 server
+used by others, ask Claude to confirm before anything that changes
+shared state: starting or stopping the server, opening or closing other
+projects, modifying templates or images in use. Inside its own throwaway
+project it can follow an approved plan.</li>
+<li><strong>Evidence over assumptions.</strong> Ask Claude to check
+every claim against the device: command output, <code>show</code>
+commands, the API's own view (<code>GET .../nodes</code>,
+<code>command_line</code>), and the official documentation of the exact
+version (<code>extreme-product-docs</code>).</li>
+<li><strong>Consoles are shared.</strong> Whatever Claude types on a
+switch console is visible to anyone attached to it, and vice versa.
+Never experiment on a switch someone else is using.</li>
+<li><strong>Credentials</strong> go in environment variables or are
+typed by the human, never in files or chat.</li>
+<li><strong>Save what you learn.</strong> Findings from each session (a
+gotcha, a working command) should go into project notes or into these
+skills, so the next session starts from there.</li>
+</ul>
+<h2 id="quick-start-from-an-ip-address-to-a-small-lab">Quick start: from
+an IP address to a small lab</h2>
+<ol type="1">
+<li><em>"Check the GNS3 server at <code>&lt;GNS3_HOST&gt;</code> and
+list its templates."</em> (<code>gns3-server-api</code>)</li>
+<li><em>"Add Fabric Engine 9.4.0.0 and Switch Engine 33.6.1.14 from
+Extreme's GitHub as templates."</em>
+(<code>extreme-switch-templates</code>: download, md5 check, upload
+through the API, template from the <code>.gns3a</code>)</li>
+<li><em>"Create a project <code>my-lab</code> with two Fabric Engine
+switches linked on 1/1 and one Switch Engine on 1/24 of the second,
+start them."</em> (<code>gns3-server-api</code>)</li>
+<li><em>"Do the first login on each switch and show me LLDP neighbors
+and IS-IS adjacencies."</em> (<code>fabric-engine-in-gns3</code>,
+<code>switch-engine-in-gns3</code>)</li>
+<li><em>"Save and back up all configs to <code>configs/v1</code>."</em>
+(<code>backup_configs.py</code>)</li>
+<li><em>"Add a FreeRADIUS container and an 802.1X client on port 2, and
+an FRR router peering OSPF on port 3."</em>
+(<code>simulated-devices-in-gns3</code>)</li>
+<li>Optional: <em>"Add Site Engine to the management network and
+discover the switches."</em> (<code>site-engine-in-gns3</code>)</li>
+</ol>
+<h2 id="what-has-been-validated">What has been validated</h2>
+<table>
+<thead>
+<tr>
+<th>Product</th>
+<th>Version</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GNS3 server</td>
+<td>2.2.45 (API v2)</td>
+<td>Validated. GNS3 3.x (API v3) not tested.</td>
+</tr>
+<tr>
+<td>Switch Engine (EXOS VM)</td>
+<td>32.6.3.126</td>
+<td>Validated in multi-switch labs over several months.</td>
+</tr>
+<tr>
+<td>Fabric Engine (VOSS VM)</td>
+<td>9.4.0.0</td>
+<td>Validated in a live test from GitHub to a two-node fabric. Fabric
+services not tested.</td>
+</tr>
+<tr>
+<td>Site Engine (XIQ-SE)</td>
+<td>24.2.15.5</td>
+<td>Validated as a GNS3 VM with EXOS VM switches.</td>
+</tr>
+<tr>
+<td>Simulated devices (Alpine)</td>
+<td>alpine:latest</td>
+<td>LLDP, 802.1X (EAP-MD5) + FreeRADIUS, FRR OSPF, 802.1Q hosts
+validated against EXOS VM; LAG from a container did not work; others not
+validated.</td>
+</tr>
+<tr>
+<td>ExtremeControl, ExtremeAnalytics</td>
+<td>—</td>
+<td><strong>Not validated</strong> (virtual appliances were not
+available). Guidance only.</td>
+</tr>
+</tbody>
+</table>
+<p>Clients were Linux only. Each skill ends with an <strong>environment
+dependencies</strong> table that says what to look for if your setup
+differs. The detailed evidence is in the appendix "Validation log".</p>
+<h2 id="giving-claude-the-product-documentation">Giving Claude the
+product documentation</h2>
+<p>Claude's general knowledge of Extreme CLIs is not version-exact.
+Download the User Guide, Command Reference, EMS Message Catalog (and for
+Site Engine, its documentation collection) <strong>for the versions in
+your lab</strong>, put them in a <code>docs/</code> folder, run
+<code>scripts/prepare_docs.py docs/</code> (PDF and HTML to searchable
+text, plus an index), and tell Claude the folder exists. The skill
+<code>extreme-product-docs</code> makes Claude search it before stating
+a command, prefer the live CLI when they disagree, and cite the page it
+used.</p>
+<h2 id="installing-and-using-the-pack">Installing and using the
+pack</h2>
+<p>A skill is a folder with a <code>SKILL.md</code>. Copy the folders
+under <code>skills/</code> to <code>~/.claude/skills/</code> (all your
+projects) or to <code>.claude/skills/</code> inside a project. Claude
+Code lists them at start-up and uses one when the task matches its
+description; you can also name it explicitly ("use the
+fabric-engine-in-gns3 skill"). Scripts need Python 3 (standard library
+only); <code>prepare_docs.py</code> also uses
+<code>pdftotext</code>.</p>
+<p>The scripts are referenced with paths relative to each skill folder
+(e.g. <code>../gns3-server-api/scripts/gns3_console.py</code>): keep the
+folders side by side.</p>
+<h3 id="good-practice">Good practice</h3>
+<ul>
+<li>Work in <strong>your own GNS3 project</strong>; never touch other
+people's projects on a shared server.</li>
+<li>Test on throwaway nodes, never on a switch someone is using:
+consoles are shared.</li>
+<li>Keep credentials out of files and chats: the scripts read
+<code>CONSOLE_USER</code>/<code>CONSOLE_PASS</code> from the
+environment.</li>
+<li>The Extreme virtual images are not supported by GTAC and have their
+own license (see each GitHub repo): this pack links to them and never
+redistributes them.</li>
+</ul>
+<h2 class="skill">Skill <code>gns3-server-api</code></h2>
+
+<p class="desc">Use when driving a remote GNS3 server (API v2) to build or operate a lab with Extreme Networks virtual devices (Switch Engine/EXOS, Fabric Engine/VOSS, Site Engine) given only its IP address — checking the server, projects, templates, nodes, links, consoles, NAT, and the known API pitfalls (phantom ports, adapter resize breaking links, auto_close, console port range). For adding switch models see extreme-switch-templates.</p>
+
+<p>The only assumption is
+<strong><code>&lt;GNS3_HOST&gt;</code></strong>: the IP (or name) of a
+working GNS3 server whose API port (default <code>3080</code>) and
+console port range are reachable from where Claude Code runs. No GUI is
+needed; everything here is plain HTTP + JSON. Replace placeholders in
+<code>&lt;ANGLE_BRACKETS&gt;</code>.</p>
+<h3 id="validated-environment">Validated environment</h3>
+<ul>
+<li>GNS3 server <strong>2.2.45</strong>, API <strong>v2</strong>, no API
+authentication, one compute (<code>local</code>), KVM available on the
+host. Clients: Linux, <code>curl</code> 8.x, Python 3 standard
+library.</li>
+<li>Devices: Switch Engine (EXOS VM) 32.6.3, Fabric Engine (VOSS VM)
+9.4.0, Site Engine (XIQ-SE) 24.2 as a QEMU VM, Linux QEMU VMs, docker
+(Alpine), NAT and <code>ethernet_switch</code> nodes.</li>
+<li><strong>GNS3 3.x uses API v3</strong> (different paths, token
+authentication). The concepts below still hold, but check the v3
+documentation before reusing any call.</li>
+</ul>
+<h3 id="ground-rules">Ground rules</h3>
+<ol type="1">
+<li><strong>Check before anything else</strong>:
+<code>curl -s -m 5 http://&lt;GNS3_HOST&gt;:3080/v2/version</code>. No
+answer means no lab: fix reachability (VPN, firewall, server powered
+off) first. A server that has just booted needs a minute or two before
+the API answers.</li>
+<li><strong>Work in your own project.</strong> A GNS3 server is often
+shared (courses, other engineers). Never open, close, modify or delete a
+project you did not create: closing a project stops all of its nodes.
+Ask the human before touching anything shared (templates in use,
+images).</li>
+<li><strong>Test in a throwaway project first</strong>, never on nodes
+someone is using. A telnet console is shared: whoever is attached sees
+everything you type, including <code>show</code> commands.</li>
+<li>Before creating big things (templates, many VMs) check free disk on
+the server if you have a shell there (images live under
+<code>/opt/gns3/images/</code> in a typical install).</li>
+</ol>
+<h3 id="core-api-calls-v2">Core API calls (v2)</h3>
+<pre><code>GET  /v2/version                                   # server version
+GET  /v2/computes                                  # usually just &quot;local&quot;
+GET  /v2/projects                                  # name, project_id, status (opened/closed)
+POST /v2/projects                 {&quot;name&quot;: &quot;MY_LAB&quot;, &quot;auto_close&quot;: false}
+POST /v2/projects/&lt;p&gt;/open        | /close
+PUT  /v2/projects/&lt;p&gt;             {&quot;auto_close&quot;: false}
+GET  /v2/templates                                 # name, template_id, template_type
+POST /v2/projects/&lt;p&gt;/templates/&lt;t&gt;  {&quot;x&quot;: 0, &quot;y&quot;: 0, &quot;compute_id&quot;: &quot;local&quot;, &quot;name&quot;: &quot;SW1&quot;}
+GET  /v2/projects/&lt;p&gt;/nodes                        # status, console, console_type, ports[]
+POST /v2/projects/&lt;p&gt;/nodes/&lt;n&gt;/start | /stop | /reload
+PUT  /v2/projects/&lt;p&gt;/nodes/&lt;n&gt;   {&quot;name&quot;: ..., &quot;properties&quot;: {...}}   # node STOPPED
+DELETE /v2/projects/&lt;p&gt;/nodes/&lt;n&gt;
+GET  /v2/projects/&lt;p&gt;/links
+POST /v2/projects/&lt;p&gt;/links       {&quot;nodes&quot;: [{&quot;node_id&quot;: A, &quot;adapter_number&quot;: 1, &quot;port_number&quot;: 0},
+                                             {&quot;node_id&quot;: B, &quot;adapter_number&quot;: 1, &quot;port_number&quot;: 0}]}
+DELETE /v2/projects/&lt;p&gt;/links/&lt;l&gt;
+GET  /v2/compute/qemu/images                       # QEMU images on the server
+POST /v2/compute/qemu/images/&lt;filename&gt;            # upload an image (raw body)
+POST /v2/templates                                 # create a template (extreme-switch-templates)</code></pre>
+<p>Example session:</p>
+<pre class="bash"><code>H=http://&lt;GNS3_HOST&gt;:3080/v2
+P=$(curl -s -X POST $H/projects -H &#39;Content-Type: application/json&#39; \
+      -d &#39;{&quot;name&quot;:&quot;my-lab&quot;,&quot;auto_close&quot;:false}&#39; | python3 -c &#39;import json,sys;print(json.load(sys.stdin)[&quot;project_id&quot;])&#39;)
+curl -s $H/templates | python3 -c &#39;import json,sys;[print(t[&quot;template_id&quot;],t[&quot;name&quot;]) for t in json.load(sys.stdin)]&#39;
+curl -s -X POST $H/projects/$P/templates/&lt;TEMPLATE_ID&gt; -H &#39;Content-Type: application/json&#39; \
+     -d &#39;{&quot;x&quot;:0,&quot;y&quot;:0,&quot;compute_id&quot;:&quot;local&quot;,&quot;name&quot;:&quot;SW1&quot;}&#39;
+curl -s $H/projects/$P/nodes | python3 -c &#39;
+import json,sys
+for n in json.load(sys.stdin): print(n[&quot;name&quot;], n[&quot;status&quot;], n[&quot;console_type&quot;], n[&quot;console&quot;])&#39;</code></pre>
+<ul>
+<li><strong>Always pass <code>"compute_id": "local"</code></strong> when
+creating nodes and templates: some creations (NAT node, docker template)
+fail without it.</li>
+<li><strong>Ports: never guess the mapping.</strong> Read
+<code>ports[]</code> of the node (<code>adapter_number</code>,
+<code>port_number</code>, <code>name</code>). For Extreme appliances
+adapter 0 is <code>Mgmt</code>, and adapter <em>n</em> is data port
+<em>n</em> (EXOS <code>Port&lt;n&gt;</code>, VOSS
+<code>1/&lt;n&gt;</code>); VOSS adapters 25-32 are the breakout ports
+<code>1/25/1</code>…<code>1/26/4</code>.</li>
+<li><strong>Set <code>auto_close: false</code></strong> on your project.
+Otherwise the server closes the project, and stops every node in it,
+when it sees no GUI client connected, which is always the case for
+API-only work. Misleading symptom: consoles or remote desktops
+"unreachable" in a loop, while in fact the whole project is closed
+(<code>GET /v2/projects/&lt;p&gt;</code> → <code>status</code>).</li>
+<li><strong>NAT to the outside world</strong>: there is no invokable
+"NAT" template; create the node directly:
+<code>POST /v2/projects/&lt;p&gt;/nodes</code> with
+<code>{"name": "NAT1", "node_type": "nat", "compute_id": "local", "properties": {"ports_mapping": [{"interface": "virbr0", "name": "nat0", "port_number": 0, "type": "ethernet"}]}}</code>.
+It gives DHCP in <code>192.168.122.0/24</code> and masquerades
+<strong>only that subnet</strong>: traffic routed from other subnets
+behind it is lost. Put a Linux router (with its own NAT) in between if
+several lab subnets need Internet access.</li>
+<li><code>ethernet_switch</code> nodes are cheap, have no CLI and are
+ideal as fan-in segments (management network, services network). Create
+them large (e.g. 48 ports) from day one.</li>
+</ul>
+<h3 id="consoles">Consoles</h3>
+<ul>
+<li><code>console_type</code> <code>telnet</code> (switches) →
+<code>telnet &lt;GNS3_HOST&gt; &lt;console&gt;</code> or, from a script,
+<code>scripts/gns3_console.py</code> (below).
+<code>vnc</code>/<code>spice</code> (VMs) → a VNC/SPICE viewer on the
+same port. <strong>The console port of VMs may change between
+restarts</strong>: always read it from the API.</li>
+<li>The GNS3 console port range is <strong>5000-9999</strong> by
+default. A manual <code>console</code> value outside it is silently
+ignored and replaced. If you design a port numbering scheme, keep it
+within 4 digits. Changing <code>console</code> needs node stopped →
+<code>PUT</code> → start (does not affect links).</li>
+<li>If a remote-desktop gateway (e.g. Apache Guacamole) will front the
+VMs, use <code>vnc</code>, not <code>spice</code>: the official
+<code>guacd</code> image has no SPICE support. Test with a banner check
+(<code>cat &lt; /dev/tcp/&lt;GNS3_HOST&gt;/&lt;port&gt;</code> prints
+<code>RFB 003.008</code> for VNC), not only <code>nc -z</code>.</li>
+</ul>
+<p><code>scripts/gns3_console.py</code>:</p>
+<pre class="bash"><code>python3 scripts/gns3_console.py &lt;GNS3_HOST&gt; &lt;port&gt; cmd &quot;show version&quot;                # EXOS
+CONSOLE_USER=rwa CONSOLE_PASS=&#39;&lt;new password&gt;&#39; python3 scripts/gns3_console.py &lt;GNS3_HOST&gt; &lt;port&gt; \
+    cmd &quot;enable&quot; &quot;terminal more disable&quot; &quot;show isis adjacencies&quot;                     # VOSS
+python3 scripts/gns3_console.py &lt;GNS3_HOST&gt; &lt;port&gt; cmd &quot;save&quot;      # then:
+python3 scripts/gns3_console.py &lt;GNS3_HOST&gt; &lt;port&gt; answer y        # reply to the y/N prompt</code></pre>
+<p>It logs in if asked, waits for the prompt after every command (so
+long outputs are complete), and supports <code>--wizard</code>,
+<code>esc</code>, <code>ctrl-c</code> and <code>vi-upload</code> (see
+its header).</p>
+<p>Console gotchas seen on both Switch Engine and Fabric Engine:</p>
+<ul>
+<li><strong>Send <code>\r</code>, not <code>\r\n</code></strong>:
+<code>\r\n</code> counts as two lines, so a password gets an extra empty
+answer and the login fails (three failures lock the VOSS console for 60
+s).</li>
+<li>Interactive steps (first-boot wizards, forced password change,
+<code>y/N</code> confirmations) are safest driven one prompt at a time:
+send, wait for the exact prompt text, send the next. Log messages
+printed on the console (VOSS prints many while it boots: ZTP+, cloud
+agent, Auto-Sense) can hide the prompt from a naive "last line"
+check.</li>
+<li>A telnet console session survives disconnects: once logged in, the
+next connection lands at the same prompt (and so does anyone
+else's).</li>
+</ul>
+<h3 id="known-api-pitfalls-and-how-to-avoid-them">Known API pitfalls
+(and how to avoid them)</h3>
+<ul>
+<li><strong><code>PUT</code> changes to <code>adapters</code>,
+<code>adapter_type</code>, <code>ports_mapping</code>,
+<code>console_type</code> or <code>options</code> are not applied to a
+running node.</strong> Always stop → <code>PUT</code> → start.</li>
+<li><strong>Resizing <code>adapters</code> on a node that already has
+links can break them.</strong> Observed: all UDP tunnels of the node
+were reassigned, links stayed listed in <code>/links</code> but came
+back with <code>NO-CARRIER</code>; restarting the peers did not help;
+the only fix was deleting and recreating the links (and, for a
+single-port NAT node, the whole node). Changing
+<code>console_type</code> or adding QEMU devices can also reorder the
+VM's PCI bus, so a Linux guest renames its NICs
+(<code>ens4</code>→<code>ens3</code>). <strong>Design rule: never
+resize, over-provision.</strong> Create each template/node with the
+adapter count it will ever need (plus a spare or two) in the creating
+<code>POST</code>; later "add an interface" becomes "link an adapter
+that already exists", which never triggers the bug. For Linux guests,
+pin NetworkManager profiles by MAC, not by interface name:
+<code>nmcli connection modify '&lt;profile&gt;' 802-3-ethernet.mac-address &lt;MAC&gt; connection.interface-name ''</code>.</li>
+<li><strong>Phantom ports</strong>: after deleting a link, the port may
+stay reserved (<code>"Port X isn't free"</code> although
+<code>/links</code> doesn't list it). Restarting the node does not free
+it. Use another free port; for a single-port node (<code>nat</code>),
+delete and recreate the node (it has no state).</li>
+<li>After any resize or console change, re-check
+<code>GET .../links</code> before assuming the cabling is
+unchanged.</li>
+</ul>
+<h3 id="optional-if-you-also-have-a-shell-on-the-gns3-host">Optional: if
+you also have a shell on the GNS3 host</h3>
+<p>Not required by the rest of the pack, but useful:</p>
+<ul>
+<li><strong>QEMU guest agent</strong> (run commands inside a Linux VM
+without network): add to the node's <code>properties.options</code>
+<code>-device virtio-serial-pci -chardev socket,path=/tmp/qga-&lt;node&gt;.sock,server,nowait,id=qga0 -device virtserialport,chardev=qga0,name=org.qemu.guest_agent.0</code>
+(stop → PUT → start; one <strong>unique</strong> socket per node, never
+at template level or two nodes collide), install
+<code>qemu-guest-agent</code> in the guest, then on the host:
+<code>echo '{"execute":"guest-exec","arguments":{"path":"/bin/hostname","capture-output":true}}' | sudo nc -U /tmp/qga-&lt;node&gt;.sock</code>
+and read the result with <code>guest-exec-status</code> +
+<code>{"pid": N}</code> (<code>out-data</code> is base64). Feed the JSON
+through stdin, never interpolated into a quoted shell string.</li>
+<li>Disk: <code>df -h</code> of the images/projects filesystem before
+creating templates. Do large <code>qemu-img</code> work in a scratch
+directory on that big filesystem, not in <code>/tmp</code> (often on a
+small root partition).</li>
+</ul>
+<h3 id="environment-dependencies--what-to-look-for-in-yours">Environment
+dependencies — what to look for in yours</h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>What we used</th>
+<th>What to identify in your environment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reach the API and console ports</td>
+<td>Routed/VPN access to <code>&lt;GNS3_HOST&gt;</code></td>
+<td>How you reach 3080 and 5000-9999 without re-routing all your
+traffic</td>
+</tr>
+<tr>
+<td>HTTP + JSON client</td>
+<td><code>curl</code>, Python 3 stdlib</td>
+<td>Any; Python stdlib is enough for the scripts</td>
+</tr>
+<tr>
+<td>Console client for scripts</td>
+<td><code>gns3_console.py</code> (sockets)</td>
+<td>Only Python 3 and network access to the console port</td>
+</tr>
+<tr>
+<td>API version</td>
+<td>v2 (GNS3 2.2)</td>
+<td>GNS3 3.x → API v3, adapt paths and auth</td>
+</tr>
+</tbody>
+</table>
+<h2 class="skill">Skill <code>extreme-switch-templates</code></h2>
+
+<p class="desc">Use when adding an Extreme Networks switch model or firmware version to a remote GNS3 server (Switch Engine/EXOS from github.com/extremenetworks/Virtual_EXOS, Fabric Engine/VOSS from Virtual_VOSS), creating a GNS3 template from a .gns3a appliance file without the GUI, or modifying an existing switch template (more ports, RAM, console, QEMU options such as -cpu host). Needs only the GNS3 server IP.</p>
+
+<p>Only <code>&lt;GNS3_HOST&gt;</code> is assumed (see
+<code>gns3-server-api</code> for the API basics). Everything here works
+through the API: no GUI and no SSH to the server are needed.</p>
+<h3 id="validated-environment-1">Validated environment</h3>
+<ul>
+<li>GNS3 server 2.2.45, API v2. Linux client, Python 3 standard
+library.</li>
+<li><strong>Fabric Engine 9.4.0.0</strong>: full path from GitHub to a
+running two-switch fabric, done with
+<code>scripts/gns3a_to_template.py</code> (see
+<code>VALIDATION.md</code> of the pack).</li>
+<li><strong>Switch Engine 32.6.3.126</strong>: official 13-port template
+and a 24-data-port extension, used in multi-switch labs. Newer EXOS
+versions (32.7.2.19, 33.x) use the same procedure but were not all
+turned into templates in our lab.</li>
+</ul>
+<h3 id="1-official-sources-githubcomextremenetworks">1. Official sources
+(github.com/extremenetworks)</h3>
+<table>
+<thead>
+<tr>
+<th>Product</th>
+<th>Repo</th>
+<th>Appliance file</th>
+<th>Images (qcow2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Switch Engine (EXOS)</td>
+<td><code>Virtual_EXOS</code></td>
+<td><code>exosvm.gns3a</code></td>
+<td><code>EXOS-VM_&lt;ver&gt;.qcow2</code> (32.6.3.126 has a
+<code>v</code> prefix: <code>EXOS-VM_v32.6.3.126.qcow2</code>); also
+<code>.iso</code> (install) and <code>.xos</code> (in-place
+upgrade)</td>
+</tr>
+<tr>
+<td>Fabric Engine (VOSS)</td>
+<td><code>Virtual_VOSS</code></td>
+<td><code>VOSSGNS3-V9.X.gns3a</code> (also <code>.8.X</code>,
+<code>.7.X</code>)</td>
+<td><code>FEGNS3.&lt;ver&gt;.qcow2</code> (9.x),
+<code>VOSSGNS3.&lt;ver&gt;.qcow2</code> (8.x)</td>
+</tr>
+</tbody>
+</table>
+<p>Images are served from
+<code>https://akamai-ep.extremenetworks.com/Extreme_P/github-en/&lt;repo&gt;/&lt;file&gt;</code>.
+The <code>.gns3a</code> lists every version with its file name,
+<strong>md5</strong> and download URL:</p>
+<pre class="bash"><code>curl -sO https://raw.githubusercontent.com/extremenetworks/Virtual_VOSS/master/VOSSGNS3-V9.X.gns3a
+python3 scripts/gns3a_to_template.py VOSSGNS3-V9.X.gns3a --list</code></pre>
+<p>Key appliance parameters (both use <code>-cpu host</code>, telnet
+console, <code>ide</code> disk, x86_64):</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Switch Engine (<code>exosvm.gns3a</code>)</th>
+<th>Fabric Engine 9.x (<code>VOSSGNS3-V9.X.gns3a</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Adapters</td>
+<td>13 × <code>rtl8139</code>: <code>Mgmt</code> +
+<code>Port1</code>…<code>Port12</code></td>
+<td>33 × <code>e1000</code>: <code>Mgmt</code> +
+<code>1/1</code>…<code>1/24</code> + 8 named
+<code>1/25/1</code>…<code>1/26/4</code></td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>1024 MB (512 MB also boots)</td>
+<td>2048 MB (required since 8.1, 64-bit image)</td>
+</tr>
+<tr>
+<td>Default login</td>
+<td><code>admin</code>, no password</td>
+<td><code>rwa</code>/<code>rwa</code>, <strong>password change forced at
+first login</strong></td>
+</tr>
+<tr>
+<td>Notes</td>
+<td>no GTAC support; VXLAN VTEP and VPLS/VPWS configure but have no data
+plane; may sit 1-2 min in <code>(pending-AAA) login:</code></td>
+<td>no GTAC support; emulates a 5520-24T with limited data plane (XA1400
+equivalent) since 8.10.1</td>
+</tr>
+</tbody>
+</table>
+<p>Other useful repos: <code>EXOS_Apps</code>, <code>exoslib</code>
+(Python on EXOS), Ansible collections <code>extreme.exos</code>,
+<code>extreme.voss</code>, <code>extreme.fe</code>. There is <strong>no
+Site Engine / XIQ-SE image on GitHub</strong>: it comes from the Extreme
+portal with a license (see <code>site-engine-in-gns3</code>). Read the
+license in each repo: redistribution of the binaries is restricted and
+publishing test or benchmark results is not allowed.</p>
+<h3 id="2-add-a-model-or-version-no-gui-no-ssh">2. Add a model or
+version (no GUI, no SSH)</h3>
+<ol type="1">
+<li>Download the qcow2 on the client and check the md5 against the
+<code>.gns3a</code>:
+<pre class="bash"><code>curl -O https://akamai-ep.extremenetworks.com/Extreme_P/github-en/Virtual_VOSS/FEGNS3.9.4.0.0.qcow2
+md5sum FEGNS3.9.4.0.0.qcow2</code></pre></li>
+<li>Upload it and create the template in one go (the script re-checks
+the md5, refuses to overwrite an existing template name, and prints the
+new <code>template_id</code>):
+<pre class="bash"><code>python3 scripts/gns3a_to_template.py VOSSGNS3-V9.X.gns3a --version 9.4.0.0 \
+    --upload-image FEGNS3.9.4.0.0.qcow2 --post &lt;GNS3_HOST&gt;</code></pre>
+Without <code>--post</code> it prints the JSON only (dry run). Under the
+hood: <code>POST /v2/compute/qemu/images/&lt;file&gt;</code> (raw body)
+then <code>POST /v2/templates</code>. If you have SSH to the server you
+can instead copy the file to its QEMU images directory
+(<code>/opt/gns3/images/QEMU/</code> on a typical install) and run
+without <code>--upload-image</code>.</li>
+<li><strong>Name templates with the version</strong>
+(<code>EXOS VM 33.6.1.14</code>, <code>FabricEngine VM 9.4.0.0</code>).
+Never overwrite or edit a template that running labs use; create a new
+one.</li>
+<li>Validate in a throwaway project (never on someone's lab): two nodes
+linked through the <strong>highest</strong> port you intend to use,
+boot, <code>show lldp neighbor(s)</code> on both sides, save the config,
+and only then use the template for real work.</li>
+</ol>
+<p>If you build the template JSON by hand instead of with the script,
+include <code>"platform": "x86_64"</code> (or <code>qemu_path</code>);
+without it the node fails with
+<code>qemu-system-None is not found</code>.</p>
+<h3 id="3-modify-a-template">3. Modify a template</h3>
+<p><code>PUT /v2/templates/&lt;template_id&gt;</code> with the fields to
+change; nodes created <strong>afterwards</strong> get the new values,
+existing nodes keep theirs (change a node with
+<code>PUT /v2/projects/&lt;p&gt;/nodes/&lt;n&gt;</code> +
+<code>properties</code>, node stopped). The script's
+<code>--adapters</code>, <code>--ram</code>, <code>--cpus</code>,
+<code>--console</code> and <code>--name</code> options cover the common
+cases when creating.</p>
+<ul>
+<li><strong>QEMU options: keep <code>-cpu host</code> on Switch
+Engine.</strong> It is a QEMU option that passes the host CPU model
+through to the guest instead of QEMU's generic default model. Without
+it, the EXOS VM does not recognise the CPU it runs on and <strong>stops
+in its bootloader menu</strong> (<code>~&gt;</code> prompt, "c) continue
+with boot process") waiting for someone to continue the boot by hand.
+Fabric Engine 9.4.0.0 booted fine without it (tested), but keep it too,
+as the appliance file does.</li>
+<li><code>-enable-kvm</code> / <code>-machine accel=kvm</code> in
+<code>options</code> are <strong>redundant</strong> on a Linux server
+with hardware acceleration enabled: GNS3 already adds
+<code>-enable-kvm</code> to every QEMU node (check a node's real
+<code>command_line</code> in the API). The server rewrites the
+appliance's <code>-enable-kvm</code> to <code>-machine accel=kvm</code>.
+Adding it to other templates changes nothing.</li>
+<li><code>-nographic</code>: the switches use the serial console
+(telnet); harmless either way.</li>
+<li><strong>More ports on Switch Engine</strong>: <code>adapters</code>
+13 → 25 gives <code>Mgmt</code> + <code>Port1</code>…<code>Port24</code>
+(<code>PORT_TO_ADAPTER(n) = n</code>). Keep one
+<code>adapter_type</code> for the whole template (the official file uses
+<code>rtl8139</code>). Do it in the template, before creating nodes (see
+the "never resize" rule in <code>gns3-server-api</code>). Validate
+through <code>Port24</code>.</li>
+<li><strong>Fabric Engine ports</strong>: adapters 1-24 =
+<code>1/1</code>…<code>1/24</code>. The appliance names adapters 25-32
+as breakout ports <code>1/25/1</code>…<code>1/26/4</code>, but an
+unchannelized switch only has <code>1/25</code> and <code>1/26</code>
+(40G): <strong>adapter 25 = <code>1/25</code>, adapter 29 =
+<code>1/26</code></strong>, the other six carry nothing. Rename them in
+<code>custom_adapters</code> if that confuses users.</li>
+<li><code>console_type</code>: keep <code>telnet</code> for
+switches.</li>
+<li>RAM/CPU: do not go below the appliance values without testing boot
+and your features.</li>
+</ul>
+<h3
+id="4-upgrading-switches-already-deployed-without-changing-template">4.
+Upgrading switches already deployed (without changing template)</h3>
+<ul>
+<li>Switch Engine: copy the <code>.xos</code> from
+<code>Virtual_EXOS</code> to the switch (only those <code>.xos</code>
+files are valid for the EXOS VM; physical-switch images are not) via
+TFTP/SCP from a reachable server, e.g. Site Engine's firmware
+repository), then <code>install image &lt;file&gt;.xos secondary</code>
+→ <code>use image secondary</code> (or primary) → <code>reboot</code>,
+and check with <code>show switch | include "ver:|Image"</code>. The
+config is kept.</li>
+<li>Fabric Engine: in-place upgrade with the release <code>.tgz</code>
+from the CLI (8.1+ requires the 64-bit, 2048 MB settings already in the
+9.x appliance). Not validated in our lab.</li>
+</ul>
+<h3
+id="environment-dependencies--what-to-look-for-in-yours-1">Environment
+dependencies — what to look for in yours</h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>What we used</th>
+<th>What to identify in yours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Download from GitHub/akamai</td>
+<td><code>curl</code> on the client</td>
+<td>Any HTTP client; proxy settings if needed</td>
+</tr>
+<tr>
+<td>Upload images</td>
+<td>API upload (<code>--upload-image</code>)</td>
+<td>Same, or SCP if you have a shell on the server</td>
+</tr>
+<tr>
+<td>Disk space on the server</td>
+<td>checked before uploading</td>
+<td>Space in the server's images directory (qcow2: 0.25-0.5 GB
+each)</td>
+</tr>
+<tr>
+<td>KVM on the server host</td>
+<td>enabled</td>
+<td>Without KVM (nested virtualization off) the VMs are very slow or do
+not boot</td>
+</tr>
+</tbody>
+</table>
+<h2 class="skill">Skill <code>switch-engine-in-gns3</code></h2>
+
+<p class="desc">Use when operating Extreme Switch Engine (ExtremeXOS/EXOS VM) nodes in a GNS3 lab from Claude Code — first boot and login, the security wizard, saving and backing up configs, default.xsf bootstrap behaviour, TFTP/SNMP for Site Engine, installing .xos images, and Python/UPM requirements. For devices around the switch (LLDP endpoints, 802.1X clients, RADIUS, routers) see simulated-devices-in-gns3.</p>
+
+<p>Assumes a running EXOS VM node on <code>&lt;GNS3_HOST&gt;</code>
+(templates: <code>extreme-switch-templates</code>; API and consoles:
+<code>gns3-server-api</code>). Commands go through the node's telnet
+console with <code>gns3_console.py</code> (path:
+<code>../gns3-server-api/scripts/</code>).</p>
+<h3 id="validated-environment-2">Validated environment</h3>
+<ul>
+<li>EXOS VM <strong>32.6.3.126</strong> (official template, 13 and 25
+adapters), GNS3 2.2.45, Linux client.</li>
+<li>Several multi-switch labs (up to 12 switches per project),
+saved/versioned configs, <code>default.xsf</code> bootstrap from TFTP,
+SNMP towards Site Engine, <code>.xos</code> installation.</li>
+<li>UPM and Python scripts tested with Alpine + lldpd endpoints (see
+<code>simulated-devices-in-gns3</code>).</li>
+</ul>
+<h3 id="first-boot">First boot</h3>
+<ol type="1">
+<li>Boot takes about 1 minute. If the node never reaches
+<code>login:</code> and its console shows a bootloader settings menu
+(<code>~&gt;</code> prompt, "c) continue with boot process"), the
+template lacks the QEMU option <code>-cpu host</code> (see
+<code>extreme-switch-templates</code>). Fix the template or node options
+(node stopped); <code>c</code> at that prompt continues the boot
+once.</li>
+<li>The first prompt is <code>(pending-AAA) login:</code>.
+<strong>Logins fail until the switch prints "Authentication Service
+(AAA) ... is now available"</strong>
+(<code>Failed to connect to authentication service ... Login incorrect</code>).
+Wait, don't retry in a loop.</li>
+<li>Login <code>admin</code>, empty password. A security wizard follows
+(MSTP, telnet, SNMP...). Each question ends with a BEL
+(<code>\x07</code>) and <code>\r\n</code> counts as two answers: answer
+one question at a time, or quit it keeping defaults:
+<code>python3 gns3_console.py &lt;GNS3_HOST&gt; &lt;port&gt; --wizard answer q</code>.</li>
+<li><code>disable clipaging</code> (the script does not do it for you)
+before long <code>show</code> commands.</li>
+</ol>
+<h3 id="saving-and-backing-up">Saving and backing up</h3>
+<ul>
+<li><code>save</code> asks
+<code>Do you want to save configuration to primary.cfg? (y/N)</code>.
+With the script: <code>cmd "save"</code> then <code>answer y</code>. A
+<code>*</code> in front of the prompt (<code>* SW1.5 #</code>) means
+unsaved changes: check it before any <code>reboot</code> or
+<code>use image</code>.</li>
+<li><strong>Never send a command right after one that may
+prompt</strong> (<code>save</code>, <code>enable ssh</code> key
+generation, <code>reboot</code>, <code>unconfigure switch</code>)
+without checking the prompt came back; the next command is swallowed as
+the answer.</li>
+<li>Back up several switches at once (saves first, then exports
+<code>show configuration</code>):
+<pre class="bash"><code>python3 scripts/backup_configs.py &lt;GNS3_HOST&gt; configs/&lt;session&gt;/v&lt;N&gt; SW1=&lt;port1&gt; SW2=&lt;port2&gt; --save</code></pre>
+Keep <code>configs/</code> in git, one folder per lab session and
+version, to restore or diff later.</li>
+<li><code>show switch | include "ver:|Image|Config"</code>: images in
+each partition, booted image, selected/booted config.
+<code>Config Booted: Factory Default</code> just means no saved config
+at the last boot.</li>
+</ul>
+<h3
+id="defaultxsf-what-really-happens-at-boot"><code>default.xsf</code>:
+what really happens at boot</h3>
+<p>If the switch has <strong>no saved configuration</strong> (never
+saved, or config deleted / <code>unconfigure switch</code>), it runs
+<code>default.xsf</code> from its filesystem on <strong>every</strong>
+boot. After the first <code>save</code> it boots from the saved config
+and <code>default.xsf</code> no longer runs. Useful to build repeatable
+lab switches:</p>
+<ul>
+<li>Put the per-switch settings in <code>default.xsf</code> (sysName,
+management IP and route, accounts, SNTP, SNMP, <code>tftp get</code> of
+lab scripts) and leave the switch unsaved: every reboot returns it to
+the lab baseline.</li>
+<li>Chicken-and-egg: to <code>tftp get</code> the file the switch needs
+a management IP first, so type it by hand the first time (example with
+the out-of-band port:
+<code>configure vlan Mgmt ipaddress &lt;ip&gt;/&lt;len&gt;</code> and
+<code>configure iproute add default &lt;gw&gt; vr VR-Mgmt</code>), then
+<code>tftp get &lt;tftp_server&gt; vr VR-Mgmt &lt;path&gt;/default.xsf default.xsf</code>.
+With in-band management use the VLAN and <code>vr VR-Default</code>
+instead (see next section).</li>
+<li>Anything done by hand (e.g. <code>enable ssh</code>) is lost at the
+next reboot unless you <code>save</code>.</li>
+</ul>
+<h3 id="exos-cli-gotchas-seen-in-the-lab-3263">EXOS CLI gotchas seen in
+the lab (32.6.3)</h3>
+<ul>
+<li>DHCP on a VLAN: <code>enable dhcp ipv4 vlan &lt;name&gt;</code>
+(<code>configure vlan &lt;x&gt; ipaddress dhcp</code> does not exist in
+this build).</li>
+<li><code>enable ipforwarding</code> globally does not enable it per
+VLAN: also <code>enable ipforwarding vlan &lt;name&gt;</code>.</li>
+<li>Loopback for a test "remote host": <code>create vlan loop</code> /
+<code>configure loop ipaddress &lt;ip&gt;/32</code> /
+<code>enable loopback-mode vlan loop</code>.</li>
+<li>Routes must show the <code>f</code> flag (in FIB) in
+<code>show iproute</code> to be really active.</li>
+<li>The console session times out and asks for login again after
+inactivity.</li>
+<li>Verify syntax with <code>?</code> on the switch and against the
+documentation of <strong>your</strong> version (see
+<code>extreme-product-docs</code>): documentation and firmware sometimes
+disagree.</li>
+</ul>
+<h3 id="management-plane-for-site-engine-and-tools">Management plane for
+Site Engine and tools</h3>
+<p><strong>Any IP interface of the switch can be used for
+management</strong> (SSH, SNMP, TFTP/SCP, Site Engine discovery), not
+only the <code>Mgmt</code> port:</p>
+<ul>
+<li><strong>Out-of-band</strong>: the <code>Mgmt</code> port (GNS3
+adapter 0), VLAN <code>Mgmt</code>, virtual router <code>VR-Mgmt</code>.
+Our labs used this as a design choice: a separate
+<code>ethernet_switch</code> segment linking all Mgmt ports with Site
+Engine, so students can break the data plane without losing
+management.</li>
+<li><strong>In-band</strong>: an IP on any data VLAN (e.g.
+<code>configure vlan Default ipaddress &lt;ip&gt;/&lt;len&gt;</code>),
+in <code>VR-Default</code>, reached through the data ports like any
+other host. Closer to many real networks, and the only option when the
+Mgmt port is not wired.</li>
+<li>The virtual router matters on the switch side: commands that open
+connections take a <code>vr</code> argument
+(<code>tftp ... vr VR-Mgmt</code>, <code>scp2 vr VR-Default ...</code>,
+<code>ping vr VR-Mgmt ...</code>, SNTP/SNMP trap/syslog targets). Use
+the VR of the interface you chose. Examples below use
+<code>VR-Mgmt</code>; replace it for in-band management.</li>
+<li>SNMP for discovery:
+<code>configure snmpv3 add community "public" name "public" user "v1v2c_ro"</code>
+(and <code>private</code>/<code>v1v2c_rw</code> for write),
+<code>enable snmp access</code>,
+<code>enable snmp access snmp-v1v2c</code> (and/or <code>snmpv3</code>
+with a user of your choice).</li>
+<li>SNTP:
+<code>configure sntp-client primary &lt;ip&gt; vr VR-Mgmt</code>,
+<code>enable sntp-client</code>.</li>
+<li>SSH: <code>enable ssh2</code> (generates a key, prompts; then
+<code>save</code>).</li>
+</ul>
+<h3 id="installing-another-image-xos-on-a-deployed-switch">Installing
+another image (.xos) on a deployed switch</h3>
+<p><strong>Only the <code>.xos</code> files published for the EXOS VM in
+github.com/extremenetworks/Virtual_EXOS can be installed this
+way.</strong> <code>.xos</code> images for physical switch families
+(Summit, ONIE/5xxx bundles...) are built for other hardware and are not
+valid for the EXOS VM; to move a node to a version that is not published
+for the VM there is no in-place path.</p>
+<ol type="1">
+<li>Put the <code>.xos</code> somewhere the switch reaches over its
+management VR (TFTP server, or SCP from a Linux host such as Site
+Engine, whose firmware repository is
+<code>/tftpboot/firmware/images/</code>).</li>
+<li><code>download image &lt;tftp_ip&gt; &lt;file&gt;.xos vr VR-Mgmt secondary</code>
+or
+<code>scp2 vr VR-Mgmt &lt;user&gt;@&lt;host&gt;:&lt;path&gt;/&lt;file&gt;.xos &lt;file&gt;.xos</code>
++ <code>install image &lt;file&gt;.xos secondary</code>.</li>
+<li><code>install</code> leaves the new partition selected: choose
+explicitly with <code>use image primary|secondary</code>, check that the
+prompt has no <code>*</code>, <code>reboot</code>, then
+<code>show switch | include "ver:|Image"</code>. The configuration is
+kept.</li>
+<li>The <code>.xos</code> files and md5s are in the
+<code>Virtual_EXOS</code> README (32.6.3.126, 32.7.2.19, 33.1.1.31,
+33.6.1.14 at the time of writing).</li>
+</ol>
+<h3 id="python-and-upm-in-the-lab">Python and UPM in the lab</h3>
+<ul>
+<li>Requirements: <code>show security python</code> →
+<code>Python (current): On</code>; <code>show security fips-mode</code>
+→ <code>Off</code>. Python 3 is available on EXOS since 32.2.</li>
+<li>No IP reachability to the switch? Upload a script through the
+console: <code>edit script &lt;name&gt;.py</code> (opens vi) then
+<code>gns3_console.py &lt;GNS3_HOST&gt; &lt;port&gt; vi-upload &lt;local file&gt;</code>
+(presses <code>i</code>, pastes, <code>ESC</code>, <code>:wq</code>);
+check with <code>ls</code> and <code>run script &lt;name&gt;.py</code>.
+With IP reachability (out-of-band or in-band), <code>scp2</code> is
+simpler.</li>
+<li>To trigger device-detect/UPM events, simulate endpoints with Alpine
++ lldpd: <code>simulated-devices-in-gns3</code> (includes a known
+classification difference: the endpoint is seen as <code>ROUTER</code>,
+not <code>BRIDGE</code>).</li>
+</ul>
+<h3
+id="environment-dependencies--what-to-look-for-in-yours-2">Environment
+dependencies — what to look for in yours</h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>What we used</th>
+<th>What to identify in yours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Console access from scripts</td>
+<td><code>gns3_console.py</code> (Python sockets)</td>
+<td>Network access to the console port range</td>
+</tr>
+<tr>
+<td>TFTP/SCP source for <code>.xos</code> and
+<code>default.xsf</code></td>
+<td>a Linux node in the lab (Site Engine or a small VM)</td>
+<td>Any host reachable from the switch's management VR</td>
+</tr>
+<tr>
+<td>Config versioning</td>
+<td>git</td>
+<td>Any VCS</td>
+</tr>
+</tbody>
+</table>
+<h2 class="skill">Skill <code>fabric-engine-in-gns3</code></h2>
+
+<p class="desc">Use when running Extreme Fabric Engine (VOSS VM, 5520-24T emulation) nodes in a GNS3 lab from Claude Code — first boot, forced password change, console quirks, Auto-Sense fabric formation, port-to-adapter mapping (including the 40G ports), saving config, and what has and has not been validated.</p>
+
+<p>Assumes a Fabric Engine template on <code>&lt;GNS3_HOST&gt;</code>
+(create it from <code>VOSSGNS3-V9.X.gns3a</code> with
+<code>extreme-switch-templates</code>). Consoles:
+<code>gns3-server-api</code>.</p>
+<h3 id="validation-status--read-first">Validation status — read
+first</h3>
+<p><strong>Validated (Fabric Engine 9.4.0.0, GNS3 2.2.45):</strong>
+template from GitHub via the API, boot, first login and password change,
+Auto-Sense forming an SPBM adjacency between two nodes, LLDP towards
+Switch Engine, the 40G ports, <code>save config</code>, booting without
+<code>-cpu host</code>. <strong>Not validated:</strong> services on top
+of the fabric (L2/L3 VSNs, I-SIDs, DvR, multicast), management IP
+configuration (out-of-band <code>Mgmt</code> port or in-band), upgrades,
+Site Engine onboarding of VOSS, anything with more than two nodes. Treat
+those parts as your own tests, and check the syntax against the Fabric
+Engine documentation of your release
+(<code>extreme-product-docs</code>).</p>
+<h3 id="first-boot-1">First boot</h3>
+<ol type="1">
+<li>Boot to <code>Login:</code> takes about 2-3 minutes. The console is
+noisy: log lines (ZTP+ discovery, cloud agent trying to reach
+ExtremeCloud IQ, Auto-Sense) keep scrolling and can land after the
+<code>Login:</code> prompt.</li>
+<li>On the console, a first-boot questionnaire may appear (disable MSTP?
+enhanced security mode? disable telnet? enable SNMPv1/v2c? SNMPv3?).
+Answer one question at a time; empty answers keep the defaults.</li>
+<li>Login <code>rwa</code> / <code>rwa</code>. <strong>The first login
+forces a password change</strong> ("This is an initial attempt using the
+default password. Please change the password to continue."): enter a new
+password twice. Drive this one prompt at a time: wait for
+<code>Password:</code>, <code>Enter the New password :</code>,
+<code>Re-enter the New password :</code>, then the prompt
+<code>5520-24T-FabricEngine:1&gt;</code>:
+<pre class="bash"><code>C=&quot;python3 ../gns3-server-api/scripts/gns3_console.py &lt;GNS3_HOST&gt; &lt;port&gt;&quot;
+$C answer &quot;&quot;    --until &quot;Login: ?$&quot;
+$C answer rwa   --until &quot;Password: ?$&quot;
+$C answer rwa   --until &quot;New password ?: ?$&quot;
+$C answer &#39;&lt;new password&gt;&#39; --until &quot;Re-enter.*: ?$&quot;
+$C answer &#39;&lt;new password&gt;&#39; --until &quot;[&gt;#] ?$&quot;</code></pre></li>
+<li><strong>Send <code>\r</code>, not <code>\r\n</code></strong>: with
+<code>\r\n</code> the switch sees an extra empty line, takes an empty
+password, and after 3 failures locks the console for 60 seconds
+("Maximum number of login attempts reached for console").</li>
+<li>Then <code>enable</code> (prompt <code>...:1#</code>) and
+<code>terminal more disable</code> before long outputs. The session
+survives disconnecting from the console port:
+<pre class="bash"><code>python3 ../gns3-server-api/scripts/gns3_console.py &lt;GNS3_HOST&gt; &lt;port&gt; \
+    cmd &quot;enable&quot; &quot;terminal more disable&quot; &quot;show sys-info&quot; &quot;show isis adjacencies&quot;</code></pre></li>
+</ol>
+<h3 id="what-you-get-with-no-configuration">What you get with no
+configuration</h3>
+<ul>
+<li>Every data port has <strong>Auto-Sense</strong> enabled. Linking two
+Fabric Engine nodes port-to-port forms the fabric on its own: the port
+goes <code>NNI-ISIS-UP</code>, <code>show isis adjacencies</code> shows
+the neighbor, an SPBM nickname is auto-generated. Two parallel links go
+<code>NNI-MLT</code>.</li>
+<li>A Switch Engine neighbor is detected as a Fabric Attach proxy
+(<code>Auto-Sense port ... entered FA-PROXY-NOAUTH state</code>), and
+both see each other by LLDP.</li>
+<li>Useful checks: <code>show lldp neighbor</code>,
+<code>show lldp neighbor summary</code>,
+<code>show isis adjacencies</code>,
+<code>show interfaces gigabitEthernet auto-sense &lt;ports&gt;</code>,
+<code>show interfaces gigabitEthernet interface &lt;ports&gt;</code>.</li>
+<li>If you don't want this in a lab (e.g. a port towards a plain host),
+disable Auto-Sense on that port per the documentation of your
+release.</li>
+</ul>
+<h3 id="ports-and-gns3-adapters">Ports and GNS3 adapters</h3>
+<table>
+<thead>
+<tr>
+<th>GNS3 adapter</th>
+<th>Appliance port name</th>
+<th>Switch port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>Mgmt</code></td>
+<td>management port</td>
+</tr>
+<tr>
+<td>1-24</td>
+<td><code>1/1</code>…<code>1/24</code></td>
+<td><code>1/1</code>…<code>1/24</code> (1000BaseTX)</td>
+</tr>
+<tr>
+<td>25</td>
+<td><code>1/25/1</code></td>
+<td><strong><code>1/25</code></strong> (40G)</td>
+</tr>
+<tr>
+<td>29</td>
+<td><code>1/26/1</code></td>
+<td><strong><code>1/26</code></strong> (40G)</td>
+</tr>
+<tr>
+<td>26-28, 30-32</td>
+<td><code>1/25/2-4</code>, <code>1/26/2-4</code></td>
+<td>no link while the ports are not channelized</td>
+</tr>
+</tbody>
+</table>
+<p>The node reports a chassis <code>5520-24T-FabricEngine</code> and a
+dummy serial number.</p>
+<h3 id="saving">Saving</h3>
+<p><code>save config</code> →
+<code>Save config to file /intflash/config.cfg successful</code>. Back
+up with <code>backup_configs.py ... --os voss</code> from the
+<code>switch-engine-in-gns3</code> skill (exports
+<code>show running-config</code>; set
+<code>CONSOLE_USER</code>/<code>CONSOLE_PASS</code> if the console asks
+for login).</p>
+<h3 id="resources-and-options">Resources and options</h3>
+<ul>
+<li>2048 MB RAM, 1 vCPU per node (appliance defaults). Several nodes
+need several GB of RAM on the server: check capacity before building
+larger fabrics.</li>
+<li>9.4.0.0 booted fine with and without the QEMU option
+<code>-cpu host</code>; keep it as in the appliance file.
+<code>-enable-kvm</code> from the appliance is redundant (GNS3 adds
+it).</li>
+</ul>
+<h3
+id="environment-dependencies--what-to-look-for-in-yours-3">Environment
+dependencies — what to look for in yours</h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>What we used</th>
+<th>What to identify in yours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Image and template</td>
+<td><code>FEGNS3.9.4.0.0.qcow2</code> + <code>VOSSGNS3-V9.X.gns3a</code>
+from GitHub</td>
+<td>Same, or the version your lab needs</td>
+</tr>
+<tr>
+<td>Interactive console steps</td>
+<td>one-prompt-at-a-time Python over sockets</td>
+<td>Any expect-like tool, or a human at the console for first login</td>
+</tr>
+</tbody>
+</table>
+<h2 class="skill">Skill <code>simulated-devices-in-gns3</code></h2>
+
+<p class="desc">Use when a GNS3 lab with Extreme switches (Switch Engine/EXOS, Fabric Engine/VOSS) needs other devices connected to the network — LLDP endpoints (APs, phones), 802.1X supplicants and a RADIUS server, routers for OSPF/BGP tests, hosts on tagged VLANs, DHCP/DNS/syslog/TFTP servers, traffic sources — built from lightweight Alpine Linux docker containers. Includes what was tested and what did not work (LAG/LACP from a container).</p>
+
+<p>Real endpoints, servers and routers are rarely available as GNS3
+appliances, but a small <strong>Alpine Linux docker container</strong>
+with the right package covers most needs, costs a few MB of RAM, and
+boots in a second. Assumes <code>&lt;GNS3_HOST&gt;</code> (API:
+<code>gns3-server-api</code>).</p>
+<h3 id="validated-environment-3">Validated environment</h3>
+<p>Tested with EXOS VM 32.6.3.126 on GNS3 2.2.45 (see
+<code>VALIDATION.md</code>), <code>alpine:latest</code> containers,
+packages from the Alpine repositories:</p>
+<table>
+<thead>
+<tr>
+<th>Device simulated</th>
+<th>Package</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLDP endpoint (AP, generic device)</td>
+<td><code>lldpd</code></td>
+<td><strong>Validated</strong> (UPM device-detect tests), with a
+classification caveat, see
+<code>reference/lldpd_endpoints.md</code></td>
+</tr>
+<tr>
+<td>802.1X supplicant (wired, EAP-MD5)</td>
+<td><code>wpa_supplicant</code></td>
+<td><strong>Validated</strong>: authenticated by EXOS netlogin through
+RADIUS; wrong password → reject, port unauthorized</td>
+</tr>
+<tr>
+<td>RADIUS server</td>
+<td><code>freeradius</code> + <code>freeradius-eap</code></td>
+<td><strong>Validated</strong> (Access-Accept / Access-Reject to
+EXOS)</td>
+</tr>
+<tr>
+<td>OSPF router</td>
+<td><code>frr</code></td>
+<td><strong>Validated</strong>: adjacency <code>FULL</code> with EXOS,
+loopbacks exchanged and reachable</td>
+</tr>
+<tr>
+<td>Host on a tagged VLAN (802.1Q)</td>
+<td>busybox <code>ip</code></td>
+<td><strong>Validated</strong>: VLAN subinterface ↔︎ EXOS tagged
+port</td>
+</tr>
+<tr>
+<td>LAG (LACP or static) to the switch</td>
+<td><code>iproute2</code> bonding</td>
+<td><strong>Did not work</strong> (see below)</td>
+</tr>
+<tr>
+<td>BGP router, DHCP/DNS server, syslog/SNMP trap receiver, TFTP server,
+traffic generator, LLDP-MED phone, MAC-auth client, PEAP/TLS 802.1X</td>
+<td><code>frr</code>, <code>dnsmasq</code>,
+<code>rsyslog</code>/<code>net-snmp</code>, <code>tftp-hpa</code>,
+<code>iperf3</code>, <code>lldpd</code></td>
+<td><strong>Not validated</strong>, recipes below are starting
+points</td>
+</tr>
+</tbody>
+</table>
+<p>Fabric Engine: same containers apply (LLDP was seen between VOSS and
+EXOS; the rest was not tested against VOSS).</p>
+<h3 id="building-blocks">Building blocks</h3>
+<p><strong>Container node</strong> (no template needed;
+<code>compute_id</code> required):</p>
+<pre><code>POST /v2/projects/&lt;p&gt;/nodes
+{&quot;name&quot;: &quot;RAD&quot;, &quot;node_type&quot;: &quot;docker&quot;, &quot;compute_id&quot;: &quot;local&quot;,
+ &quot;properties&quot;: {&quot;image&quot;: &quot;alpine:latest&quot;, &quot;adapters&quot;: 2, &quot;start_command&quot;: &quot;/bin/sh&quot;,
+                &quot;console_type&quot;: &quot;telnet&quot;}}</code></pre>
+<p>The server pulls <code>alpine:latest</code> the first time (it needs
+Internet access). Or create a reusable template with the same properties
+(<code>POST /v2/templates</code>,
+<code>template_type: docker</code>).</p>
+<p><strong>Pattern: two interfaces per container.</strong>
+<code>eth0</code> → an <code>ethernet_switch</code> linked to a GNS3
+<code>nat</code> node, only for installing packages
+(<code>udhcpc -i eth0 -q; apk add -q &lt;pkg&gt;</code>);
+<code>eth1</code> → the switch port under test. This keeps the lab port
+clean and the switch out of the Internet path. If you prefer no Internet
+at all, build your own image with the packages preinstalled and push it
+to a registry the server can reach.</p>
+<p><strong>Consoles</strong>: the container console (telnet) is a root
+shell (<code>/ # </code>); drive it with
+<code>gns3_console.py cmd "..."</code> like a switch. Addresses:
+<code>ip addr add &lt;ip&gt;/&lt;len&gt; dev eth1; ip link set eth1 up</code>.
+Do not count on persistence: GNS3 keeps only the directories declared
+persistent for docker nodes (<code>extra_volumes</code>;
+<code>/etc/network</code> by default) when containers are recreated, so
+keep the setup commands in a script you can replay (we did not test
+which changes survive a project close/reopen).</p>
+<h3 id="8021x-supplicant--radius--switch">802.1X: supplicant + RADIUS +
+switch</h3>
+<p>Topology: RADIUS container <code>eth1</code> → switch port 1 (VLAN
+<code>radnet</code>), supplicant <code>eth1</code> → port 2.</p>
+<p>RADIUS (FreeRADIUS 3 on Alpine):</p>
+<pre class="sh"><code>apk add -q freeradius freeradius-eap openssl make
+ip addr add 10.0.1.2/24 dev eth1; ip link set eth1 up
+printf &#39;client sw1 {\n ipaddr = 10.0.1.1\n secret = testing123\n}\n&#39; &gt;&gt; /etc/raddb/clients.conf
+sed -i &#39;1i testuser Cleartext-Password := &quot;testpass&quot;&#39; /etc/raddb/mods-config/files/authorize
+cd /etc/raddb/certs &amp;&amp; ./bootstrap &amp;&amp; chown -R radius:radius /etc/raddb/certs; cd /
+(radiusd -X &gt; /tmp/rad.log 2&gt;&amp;1 &amp;)          # debug mode, log in /tmp/rad.log</code></pre>
+<p>The EAP module <strong>does not start without certificates</strong>
+(<code>rlm_eap_tls: Failed initializing SSL context</code>) even if you
+only use EAP-MD5: run <code>certs/bootstrap</code> (self-signed, fine
+for a lab; also needed for PEAP). Add VSAs (VLAN, Filter-Id) after the
+password in the <code>authorize</code> file to test dynamic VLAN /
+policy assignment.</p>
+<p>Switch Engine (netlogin 802.1X on port 2, RADIUS reached in-band from
+VR-Default):</p>
+<pre><code>configure vlan Default delete ports 1
+create vlan radnet
+configure vlan radnet add ports 1
+configure vlan radnet ipaddress 10.0.1.1/24
+configure radius netlogin primary server 10.0.1.2 1812 client-ip 10.0.1.1 vr VR-Default shared-secret testing123
+enable radius netlogin
+create vlan nlvlan
+configure netlogin vlan nlvlan          # required first: &quot;Error: No NetLogin VLAN is configured.&quot;
+enable netlogin dot1x
+enable netlogin ports 2 dot1x</code></pre>
+<p>Supplicant:</p>
+<pre class="sh"><code>apk add -q wpa_supplicant
+ip link set eth1 up
+printf &#39;ctrl_interface=/var/run/wpa_supplicant\nap_scan=0\nnetwork={\n key_mgmt=IEEE8021X\n eap=MD5\n identity=&quot;testuser&quot;\n password=&quot;testpass&quot;\n eapol_flags=0\n}\n&#39; &gt; /etc/wpa.conf
+wpa_supplicant -B -D wired -i eth1 -c /etc/wpa.conf     # Alpine&#39;s build has no -f option
+wpa_cli -i eth1 status        # EAP state=SUCCESS, suppPortStatus=Authorized</code></pre>
+<p>Check: <code>show netlogin port 2</code> →
+<code>Yes, Radius  802.1x  testuser</code>; <code>/tmp/rad.log</code> →
+<code>Access-Accept</code>. Negative test:
+<code>wpa_cli -i eth1 set_network 0 password '"wrong"'</code>,
+<code>wpa_cli -i eth1 logoff; wpa_cli -i eth1 logon</code> →
+<code>EAP state=FAILURE</code>, <code>Access-Reject</code>, switch shows
+<code>No</code>. EAPOL frames cross GNS3 container links without any
+special setting. Next steps (not validated): PEAP
+(<code>eap=PEAP</code>, <code>phase2="auth=MSCHAPV2"</code>), MAC-based
+auth (<code>enable netlogin mac</code>, RADIUS user = MAC address),
+several supplicants behind a hub.</p>
+<h3 id="routers-for-routing-tests-frrouting">Routers for routing tests
+(FRRouting)</h3>
+<pre class="sh"><code>apk add -q frr
+ip addr add 10.0.3.2/24 dev eth1; ip link set eth1 up; ip addr add 10.99.99.2/32 dev lo
+sed -i &#39;s/^ospfd=no/ospfd=yes/&#39; /etc/frr/daemons        # bgpd=yes for BGP
+/usr/lib/frr/frrinit.sh start
+vtysh -c &#39;conf t&#39; -c &#39;router ospf&#39; -c &#39;ospf router-id 2.2.2.2&#39; \
+      -c &#39;network 10.0.3.0/24 area 0&#39; -c &#39;network 10.99.99.2/32 area 0&#39; -c &#39;end&#39;
+vtysh -c &#39;show ip ospf neighbor&#39; -c &#39;show ip route ospf&#39;</code></pre>
+<p>Switch Engine side:</p>
+<pre><code>configure vlan Default delete ports 3
+create vlan ospfnet
+configure vlan ospfnet add ports 3
+configure vlan ospfnet ipaddress 10.0.3.1/24
+enable ipforwarding vlan ospfnet
+configure ospf routerid 1.1.1.1
+configure ospf add vlan ospfnet area 0.0.0.0
+enable ospf
+show ospf neighbor                 # 2.2.2.2 FULL</code></pre>
+<p>Advertise more prefixes from the container (loopbacks,
+<code>ip route add blackhole ...</code> +
+<code>redistribute static</code>) to load the switch's routing table.
+BGP (<code>bgpd=yes</code>, <code>router bgp &lt;asn&gt;</code>,
+<code>neighbor ...</code>) follows the same pattern: not validated.
+Useful for: route redistribution, filtering/policies, ECMP (two
+routers), failover tests, VRRP neighbours (<code>keepalived</code>
+package, not validated).</p>
+<h3 id="hosts-on-tagged-vlans">Hosts on tagged VLANs</h3>
+<pre class="sh"><code>ip link add link eth1 name eth1.20 type vlan id 20
+ip addr add 10.0.20.2/24 dev eth1.20; ip link set eth1.20 up</code></pre>
+<p>Switch: <code>create vlan v20 tag 20</code>,
+<code>configure vlan v20 add ports 3 tagged</code>, IP on the VLAN. One
+container can be a host in many VLANs (one subinterface each), handy for
+inter-VLAN routing, ACL and QoS classification tests.</p>
+<h3 id="other-servers-and-tools-not-validated">Other servers and tools
+(not validated)</h3>
+<ul>
+<li><strong>DHCP/DNS</strong>: <code>dnsmasq</code>
+(<code>dhcp-range=...</code>, <code>address=/name/ip</code>); with the
+switch as relay (EXOS
+<code>configure bootprelay add &lt;server&gt;</code>), dnsmasq answers
+relayed requests with only a <code>dhcp-range</code> for that subnet. Do
+not use dnsmasq's own <code>dhcp-relay=</code> for this.</li>
+<li><strong>Syslog / SNMP traps</strong>: <code>rsyslog</code> or
+<code>busybox syslogd -n -O /dev/stdout</code>; <code>net-snmp</code>
+(<code>snmptrapd -f -Lo</code>).</li>
+<li><strong>TFTP/SCP server</strong> for configs, scripts and
+<code>.xos</code> images: <code>tftp-hpa</code>
+(<code>in.tftpd -L -s /srv/tftp</code>), <code>openssh</code>.</li>
+<li><strong>Traffic</strong>: <code>iperf3</code>, <code>hping3</code>,
+<code>tcpreplay</code> to exercise ACLs, QoS, flow export. Mind the
+limited data plane of the virtual switches: use it for function, not for
+performance.</li>
+<li><strong>LLDP-MED phone</strong>: <code>lldpd</code> supports MED
+classes and network policies; check which device type the switch assigns
+before relying on it.</li>
+</ul>
+<h3 id="lag--lacp-from-a-container-did-not-work">LAG / LACP from a
+container: did not work</h3>
+<p>Tried with a container with two links to EXOS ports 4-5
+(<code>ip link add bond0 type bond mode 802.3ad</code>, iproute2) and
+<code>enable sharing 4 grouping 4-5 lacp</code>: the container received
+the switch's LACPDUs (partner MAC set, both members in one aggregator),
+but EXOS stayed <code>Selected</code>/<code>Waiting</code> with
+aggregator count 0 and no traffic. Static sharing with a
+<code>balance-xor</code> bond failed too, and the link state of ports
+4-5 on the EXOS VM flapped between up and down after the container's
+interfaces were reconfigured. To test LAGs, use two virtual switches
+back to back (not validated in this pack either).</p>
+<h3 id="why-not-8023x">Why not 802.3x?</h3>
+<p>802.3x is Ethernet flow control (PAUSE frames). GNS3 links are
+software tunnels without real congestion or PHY behaviour, so flow
+control cannot be tested meaningfully; test it on hardware.</p>
+<h3
+id="environment-dependencies--what-to-look-for-in-yours-4">Environment
+dependencies — what to look for in yours</h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>What we used</th>
+<th>What to identify in yours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Docker on the GNS3 server</td>
+<td>GNS3's docker support, <code>alpine:latest</code> pulled from Docker
+Hub</td>
+<td>Docker installed on the server and a reachable registry</td>
+</tr>
+<tr>
+<td>Package installs</td>
+<td>NAT node + <code>apk</code></td>
+<td>Internet via NAT, or prebuilt images</td>
+</tr>
+</tbody>
+</table>
+<h2 class="skill">Skill <code>site-engine-in-gns3</code></h2>
+
+<p class="desc">Use when running ExtremeCloud IQ Site Engine (XIQ-SE, formerly Extreme Management Center/NetSight) as a VM inside a GNS3 lab together with virtual Switch Engine/Fabric Engine switches — getting the image in, sizing, disks, console, network placement, discovering switches by SNMP, firmware repository, ZTP+ DNS, MIB Tools, cloning/compacting its disks — and for the (not validated) place of ExtremeControl and ExtremeAnalytics engines.</p>
+
+<p>Assumes <code>&lt;GNS3_HOST&gt;</code> (API basics:
+<code>gns3-server-api</code>). Site Engine is <strong>not</strong> on
+GitHub: it comes from the Extreme support portal and needs a license (an
+evaluation license works for labs).</p>
+<h3 id="validated-environment-4">Validated environment</h3>
+<ul>
+<li>XIQ-SE <strong>24.2.15.5</strong> as a GNS3 QEMU VM on GNS3 2.2.45:
+web UI, SNMP discovery of EXOS VM switches, firmware repository used to
+push <code>.xos</code> images, FlexViews, MIB Tools.</li>
+<li>Instances at 16 GB RAM / 4 vCPU (as installed) and 8 GB / 2 vCPU
+(clone used for a single small lab of a few switches). Not validated
+with Fabric Engine devices.</li>
+<li>Our base VM was an Ubuntu VM with Site Engine installed on it; we
+did <strong>not</strong> import the vendor virtual appliance ourselves
+(see "Getting the image in").</li>
+</ul>
+<h3 id="getting-the-image-in">Getting the image in</h3>
+<p>Two routes; pick what your download gives you:</p>
+<ol type="1">
+<li><strong>Vendor virtual appliance (OVA/VMDK)</strong> — not validated
+by us. An <code>.ova</code> is a tar archive:
+<code>tar xf &lt;file&gt;.ova</code>, then convert each disk:
+<code>qemu-img convert -p -O qcow2 &lt;disk&gt;.vmdk siteengine-hda.qcow2</code>
+(and <code>-hdb</code> for a second disk). Upload with
+<code>POST /v2/compute/qemu/images/&lt;file&gt;</code> (as
+<code>gns3a_to_template.py --upload-image</code> does) or copy to the
+server's QEMU images directory, then create a QEMU template with the
+RAM/CPU/disks from the OVA's <code>.ovf</code> descriptor.</li>
+<li><strong>Install on a Linux VM</strong> (how our instance was built):
+a supported Linux QEMU VM in GNS3, then the Site Engine installer inside
+it following the Installation Guide.</li>
+</ol>
+<p>Template settings that worked: <code>platform: x86_64</code>,
+<code>adapter_type: virtio-net-pci</code>, 1-2 adapters (see network),
+disks as <code>hda</code>/<code>hdb</code>,
+<code>console_type: vnc</code> (or <code>spice</code>), RAM/vCPU as
+below. Clear <code>options</code> at template level; if you add a QEMU
+guest-agent socket, set it per node with a unique path (a socket defined
+in the template makes two instances collide).</p>
+<h3 id="sizing">Sizing</h3>
+<ul>
+<li>Start with what the Installation Guide asks for your version (our
+install: 16 GB / 4 vCPU).</li>
+<li>8 GB / 2 vCPU was enough for one small lab (a few switches, one or
+two users). We did not go lower. Several instances on one server add up
+quickly: plan RAM before cloning a pool.</li>
+</ul>
+<h3 id="network-placement">Network placement</h3>
+<ul>
+<li>Site Engine only needs IP reachability to <strong>some</strong> IP
+of each switch: the out-of-band <code>Mgmt</code> port or any in-band
+VLAN interface (see <code>switch-engine-in-gns3</code>, "Management
+plane"). In our labs, by design, Site Engine's NIC sat on the same
+<code>ethernet_switch</code> segment as the switches' <code>Mgmt</code>
+ports, with a static IP. With in-band management, connect it to a data
+VLAN (or route to one). On the switch, traffic it originates (traps,
+syslog, TFTP/SCP) leaves from the VR of the chosen interface.</li>
+<li>For Internet access (licensing, cloud onboarding, updates) add a
+second NIC to a GNS3 <code>nat</code> node (DHCP from
+<code>192.168.122.0/24</code>; that address can change between boots,
+and it is only reachable from the GNS3 host itself) or route through a
+Linux router node.</li>
+<li>Web UI: <code>https://&lt;site_engine_ip&gt;:8443</code> from any
+machine with a route to it (e.g. a Linux desktop VM in the lab, reached
+through its VNC console).</li>
+<li>The console port (VNC/SPICE) can change on every start: read it from
+the API.</li>
+</ul>
+<h3 id="using-it-with-the-virtual-switches">Using it with the virtual
+switches</h3>
+<ul>
+<li><strong>Discovery</strong>: enable SNMP on the switches (see
+<code>switch-engine-in-gns3</code>), create the matching SNMP
+credential/profile in Site Engine and discover the management subnet(s)
+or add devices by IP. Check SNMP from the switch side with
+<code>show snmpv3 ...</code> and from Site Engine with its MIB
+Tools.</li>
+<li><strong>Firmware repository</strong>: images uploaded through the
+web UI (Firmware / image management) land in
+<code>/tftpboot/firmware/images/</code> on the Site Engine server.
+Switches can pull them by TFTP, or with
+<code>scp2 vr &lt;VR-Mgmt|VR-Default&gt; &lt;user&gt;@&lt;site_engine_ip&gt;:/tftpboot/firmware/images/&lt;file&gt;.xos &lt;file&gt;.xos</code>.
+For EXOS VM upload only the <code>.xos</code> files published in
+<code>Virtual_EXOS</code> (not <code>.iso</code>, not images for
+physical switches).</li>
+<li><strong>ZTP+</strong>: a switch doing ZTP+ gets an IP and DNS domain
+by DHCP (on the Mgmt port or an in-band VLAN; check which interfaces
+your version uses in its User Guide) and resolves
+<code>extremecontrol.&lt;domain&gt;</code> to find Site Engine. In a
+lab, make that name resolve to your instance: e.g. with dnsmasq,
+<code>address=/extremecontrol.&lt;domain&gt;/&lt;site_engine_ip&gt;</code>.
+If several labs share one flat subnet, tag by client MAC:
+<code>dhcp-host=&lt;switch MAC on that interface&gt;,set:lab1</code>,
+<code>dhcp-option=tag:lab1,15,"lab1.example"</code>. The MAC of each
+node port is in the GNS3 API (<code>ports[].mac_address</code>).
+Designed and pre-provisioned in our lab; the full ZTP+ flow was not
+exercised end to end.</li>
+<li><strong>MIB Tools</strong> (legacy Java Web Start client):
+<code>https://&lt;site_engine_ip&gt;:8443/MIB_Tools.jnlp</code> (no link
+in the web UI of 24.2). On a Linux desktop, <code>icedtea-netx</code>
+(<code>javaws</code>) with OpenJDK 11 runs it (accept the self-signed
+certificate and the signed app; <code>sun/misc/Launcher not found</code>
+traces are harmless). It queries SNMP <strong>from the desktop</strong>,
+so that desktop needs a route to the switches' management IPs.</li>
+<li><strong>FlexViews</strong> (custom SNMP table views): skill
+<code>site-engine-flexview-builder</code>.</li>
+</ul>
+<h3 id="cloning-and-compacting-site-engine-disks">Cloning and compacting
+Site Engine disks</h3>
+<p>To make a reusable template from an instance (or shrink it):</p>
+<ul>
+<li>Compact Site Engine's own database first (from its UI/admin tools),
+then zero-fill free space inside the guest and
+<code>qemu-img convert -O qcow2 -c</code>. <strong>Zero-filling a thin
+disk without discard can first grow it massively</strong> (e.g. from 17
+GB to 200+ GB) before compaction: check free space first.</li>
+<li><code>qemu-img convert</code> of an image with a backing file
+<strong>does not always flatten it</strong>: check
+<code>qemu-img info &lt;file&gt; | grep backing</code>. If a backing
+file remains, <code>qemu-img rebase -b '' &lt;file&gt;</code> (safe
+mode) merges it; the real size can then be much larger than the first
+result. Run <code>qemu-img check</code> before deleting any intermediate
+copy.</li>
+<li>Do this work in a large scratch directory on the images filesystem,
+never in <code>/tmp</code> on a small root partition (it filled
+<code>/</code> once).</li>
+<li>After cloning: new hostname/IP inside the guest, one unique
+guest-agent socket per node.</li>
+</ul>
+<h3
+id="extremecontrol-and-extremeanalytics--not-validated">ExtremeControl
+and ExtremeAnalytics — NOT validated</h3>
+<p>Not deployed in our lab (their virtual appliances were not
+available). How they would fit, to be confirmed with the product
+documentation of your version:</p>
+<ul>
+<li>Both are separate engine VMs (Access Control engine for
+ExtremeControl/NAC, Analytics engine for ExtremeAnalytics) managed from
+Site Engine. In GNS3 they would be QEMU VMs built from the vendor
+appliance disks, like route 1 above, each with its own RAM/CPU
+needs.</li>
+<li>ExtremeControl needs the switches to send RADIUS (802.1X/MAC auth)
+to the engine: the engine's IP must be reachable from the switches'
+authentication VR, and test endpoints (Linux VMs with a supplicant, or
+Alpine containers) must sit behind switch ports.</li>
+<li>ExtremeAnalytics needs flow data (e.g. IPFIX/sFlow) or mirrored
+traffic from the switches; check which data plane features the virtual
+switches support (EXOS VM and VOSS VM have a limited data plane).</li>
+<li>If you validate them, add a section here with the same structure
+(image, sizing, network, gotchas).</li>
+</ul>
+<h3
+id="environment-dependencies--what-to-look-for-in-yours-5">Environment
+dependencies — what to look for in yours</h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>What we used</th>
+<th>What to identify in yours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Site Engine image and license</td>
+<td>installed on a Linux VM, evaluation-type lab use</td>
+<td>Portal access; OVA or installer for your version</td>
+</tr>
+<tr>
+<td>Disk conversion</td>
+<td><code>qemu-img</code></td>
+<td><code>qemu-img</code> on the client or on the server</td>
+</tr>
+<tr>
+<td>A browser/desktop inside the lab</td>
+<td>Linux desktop VM with Firefox</td>
+<td>Any VM with a route to Site Engine, or routing from your own PC</td>
+</tr>
+</tbody>
+</table>
+<h2 class="skill">Skill <code>site-engine-flexview-builder</code></h2>
+
+<p class="desc">Use when creating, editing, or understanding ExtremeCloud IQ Site Engine (XIQ-SE, formerly NetSight/Extreme Management Center) FlexViews (.tpl files) — building a custom SNMP table view from a MIB definition plus a natural-language description of the desired columns, deploying it and reloading the server.</p>
+
+<p>A <strong>FlexView</strong> is an XML definition (<code>.tpl</code>)
+that tells Site Engine which SNMP table to walk and how to show each
+column in a grid of the UI. There is no official generator from natural
+language: this skill documents the real format (DTD + examples checked
+on a Site Engine 24.2.15.5) so one can be written by hand from a MIB
+file and a description of what should be shown.</p>
+<h3 id="validated-environment-5">Validated environment</h3>
+<ul>
+<li>ExtremeCloud IQ Site Engine 24.2.15.5 running as a VM in a GNS3 lab
+(<code>site-engine-in-gns3</code>).</li>
+<li>Access to the Site Engine host by SSH
+(<code>ssh &lt;user&gt;@&lt;site_engine_ip&gt;</code>),
+<code>sudo</code> needed to read and write under the install
+directory.</li>
+<li>Format details below marked <strong>confirmed</strong> were checked
+against dozens of factory and GitHub examples; those marked
+<strong>hypothesis</strong> were not.</li>
+</ul>
+<h3 id="where-flexviews-live">Where FlexViews live</h3>
+<p>The install base is <code>/opt/Extreme_Networks/NetSight/</code> on
+our instance; Extreme's documentation uses
+<code>/usr/local/Extreme_Networks/NetSight/</code>, and it can be chosen
+at install time. <strong>Check first</strong>:
+<code>ls -d /opt/Extreme_Networks /usr/local/Extreme_Networks 2&gt;/dev/null</code>;
+if neither exists, ask the human where it is installed instead of
+searching blindly. Paths below are relative to
+<code>&lt;base&gt;/appdata/</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>System/FlexViews/</code></td>
+<td>Loaded by the running server; organised by category
+(<code>MAC Locking/</code>, <code>Radius/</code>,
+<code>Interface/</code>...). Also has <code>flextable.dtd</code>.</td>
+</tr>
+<tr>
+<td><code>VendorProfiles/Released/&lt;Vendor&gt;/FlexViews/</code></td>
+<td>~400 factory FlexViews (Extreme and other vendors): <strong>example
+library</strong>, do not edit.</td>
+</tr>
+<tr>
+<td><strong><code>VendorProfiles/Stage/MyVendorProfile/FlexViews/My FlexViews/</code></strong></td>
+<td><strong>Where custom FlexViews go</strong> for Site Engine / Extreme
+Management Center 8.2+ (create it if missing).
+<code>System/FlexViews/My FlexViews/</code> was the location for
+NetSight ≤ 8.1.</td>
+</tr>
+<tr>
+<td><code>VendorProfiles/Stage/MyVendorProfile/MIBs/</code></td>
+<td>The MIB files your custom FlexViews use, so the server resolves
+symbolic OIDs (create if missing).</td>
+</tr>
+</tbody>
+</table>
+<p>More examples: <a
+href="https://github.com/extremenetworks/XMC-Report-Views">https://github.com/extremenetworks/XMC-Report-Views</a>
+(official <code>.tpl</code> examples by category: <code>EXOS/</code>,
+<code>Networking/</code>, other vendors). Check it before writing one
+from scratch: a similar view may exist already. Its
+<code>FlexView/README.md</code> documents the path difference by version
+above.</p>
+<h3 id="reloading-the-server-after-adding-a-flexview">Reloading the
+server after adding a FlexView</h3>
+<p>Copying the file is not enough: restart the Site Engine server
+service as root (per Extreme's documentation,
+<code>systemctl stop nsserver</code> /
+<code>systemctl start nsserver</code>; confirm the unit name on your
+instance with
+<code>systemctl list-units | grep -i -E 'nsserver|netsight'</code>). The
+restart interrupts the web UI: warn anyone using it first.</p>
+<h3 id="xml-structure-confirmed-by-flextabledtd">XML structure
+(confirmed by <code>flextable.dtd</code>)</h3>
+<pre><code>flextablelist
+└── flextable (id=NAME, class=&quot;com.ets.nac.flexview.FvTable&quot;, ...)
+    ├── tableModel          → text: com.ets.nac.tables.TbModel
+    ├── column* (id, modelIndex, editable, sortOrder, width, comparator...)
+    │   ├── notes?          → free text, column tooltip
+    │   └── dataField       → OID reference (next section)
+    ├── comments?           → general notes of the FlexView
+    └── dataField?          → TBLHASH::::TBLHDR::... (base MIB table, see below)</code></pre>
+<p>All attributes of <code>flextable</code> and <code>column</code>
+(colours, width, order, editable...) are in the DTD: read
+<code>&lt;base&gt;/appdata/System/FlexViews/flextable.dtd</code> for
+anything not covered here.</p>
+<h3 id="the-datafield-of-each-column-partly-reverse-engineered">The
+<code>dataField</code> of each column (partly reverse-engineered)</h3>
+<p>Format:
+<code>OID::&lt;name-or-numeric-OID&gt;:::SNMP::&lt;numeric block&gt;</code>.
+Real example:</p>
+<pre class="xml"><code>&lt;dataField&gt;OID::etsysMACLockingLockedAddress:::SNMP::SNMPNA;false;4;3;false;false;4;2;0;2;6&lt;/dataField&gt;</code></pre>
+<p><strong>Confirmed:</strong></p>
+<ul>
+<li>The OID can be symbolic (resolved against the MIBs loaded on the
+server) or the full numeric OID; both appear in factory files.</li>
+<li>First field = access mode: <code>SNMP</code> read-only;
+<code>SNMPW</code> editable (SNMP SET; always matches
+<code>editable="true"</code> on the <code>&lt;column&gt;</code>);
+<code>SNMPNA</code> hidden/not directly accessible (typically the row
+key, <code>hidden="true"</code>).</li>
+</ul>
+<p><strong>Second field = SNMP type</strong> (matches ASN.1/BER tags;
+verify against a real example of the same type before relying on
+it):</p>
+<table>
+<thead>
+<tr>
+<th>2nd field</th>
+<th>SNMP type</th>
+<th>Confidence</th>
+<th>Seen on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>2</code></td>
+<td><code>INTEGER</code> / enum / <code>TruthValue</code></td>
+<td><strong>Confirmed</strong> (several vendors)</td>
+<td><code>extremeImageBooted</code>,
+<code>ifLinkUpDownTrapEnable</code></td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>BIT STRING</code></td>
+<td>Hypothesis, rare</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>OCTET STRING</code> (binary)</td>
+<td>Hypothesis</td>
+<td>MAC addresses</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td><code>OBJECT IDENTIFIER</code></td>
+<td>Hypothesis</td>
+<td>references to another OID</td>
+</tr>
+<tr>
+<td><code>15</code></td>
+<td><code>DisplayString</code></td>
+<td>Strong hypothesis</td>
+<td><code>sysName</code>, <code>ifName</code>, <code>ifAlias</code>,
+firmware versions</td>
+</tr>
+<tr>
+<td><code>65</code></td>
+<td><code>Counter32</code></td>
+<td>Hypothesis</td>
+<td>counters</td>
+</tr>
+<tr>
+<td><code>66</code></td>
+<td><code>Gauge32</code> / <code>Unsigned32</code></td>
+<td>Hypothesis</td>
+<td>values going up and down</td>
+</tr>
+<tr>
+<td><code>67</code></td>
+<td><code>TimeTicks</code></td>
+<td><strong>Confirmed</strong></td>
+<td><code>sysUpTime</code></td>
+</tr>
+<tr>
+<td><code>70</code></td>
+<td><code>Counter64</code></td>
+<td>Hypothesis</td>
+<td>high-volume counters</td>
+</tr>
+</tbody>
+</table>
+<p>The remaining fields (column position, extra flags, trailing
+<code>0;0;0...</code>) are not decoded; they seem to encode the MIB
+table index position and internal UI flags.</p>
+<p><strong>Safest technique</strong>: don't build the numeric block from
+scratch. Find, in the factory library, an existing column whose OID has
+the <strong>same SNMP <code>SYNTAX</code></strong> and clone its whole
+block, changing only the OID name:</p>
+<pre class="bash"><code>sudo grep -rl &quot;Counter64&quot; &lt;base&gt;/appdata/VendorProfiles/Released/ | head</code></pre>
+<h4 id="reserved-columns-always-present">Reserved columns (always
+present)</h4>
+<p>Every FlexView starts with these 3 fixed columns, which are internal
+metadata, not OIDs. Copy them as-is, with the same <code>id</code>s and
+order, before the real MIB columns:</p>
+<pre class="xml"><code>&lt;column id=&quot;0&quot; fixed=&quot;true&quot; hidden=&quot;true&quot;&gt;ReqID
+    &lt;dataField&gt;OID::ReqID:::SNMP::ReqID&lt;/dataField&gt;&lt;/column&gt;
+&lt;column id=&quot;1&quot; fixed=&quot;true&quot; modelIndex=&quot;1&quot;&gt;IP Address
+    &lt;dataField&gt;OID::IP Address:::SNMP::IP Address&lt;/dataField&gt;&lt;/column&gt;
+&lt;column id=&quot;2&quot; fixed=&quot;true&quot; hidden=&quot;true&quot; modelIndex=&quot;2&quot;&gt;Instance
+    &lt;dataField&gt;OID::Instance:::SNMP::Instance&lt;/dataField&gt;&lt;/column&gt;</code></pre>
+<h4 id="computed-columns-expr-advanced-use-with-care">Computed columns
+(<code>EXPR</code>, advanced, use with care)</h4>
+<p>Seen in <code>XOS_firmware_Info.tpl</code> ("Device Type"):
+<code>SNMP::EXPR;true;15;3;false;false;1;2;0;0;0;0;0</code> (no
+<code>OID::</code> prefix), plus a table-level suffix
+<code>::::GEMHASH::::00000:Device Type::routine 111 DeviceType({ "IP Address":1 } )</code>
+calling an internal routine. Not enough evidence to document it: clone a
+real <code>EXPR</code> example instead of inventing the syntax.</p>
+<h4 id="table-level-datafield-after-the-last-column">Table-level
+<code>dataField</code> (after the last
+<code>&lt;/column&gt;</code>)</h4>
+<pre class="xml"><code>&lt;dataField&gt;TBLHASH::::TBLHDR::0;0;true;30;etsysMACLockingStaticStationEntry;V.0.0.2.0;0;0;106&lt;/dataField&gt;</code></pre>
+<p>Names the <strong>base MIB table entry</strong> walked
+(<code>XxxEntry</code>, from the MIB's <code>SEQUENCE OF</code>). When
+the columns come from standard tables Site Engine already knows
+(<code>ifTable</code>, <code>ifXTable</code>, indexed by
+<code>ifIndex</code>), <code>None</code> works instead of the entry name
+(<code>TBLHASH::::TBLHDR::0;0;true;30;None;V.0.3.3.0;0;0;103</code>).
+Name the entry explicitly only for new proprietary tables.</p>
+<h3 id="workflow-mib--natural-language-description--tpl">Workflow: MIB +
+natural-language description → <code>.tpl</code></h3>
+<ol type="1">
+<li>Find the target MIB table from the request and the MIB file (the
+<code>SEQUENCE OF XxxEntry</code> whose columns match).</li>
+<li>For each wanted column note: OID name, <code>SYNTAX</code>, and
+<code>read-only</code>/<code>read-write</code>
+(<code>MAX-ACCESS</code>).</li>
+<li>Look for an existing similar view (GitHub repo above,
+<code>VendorProfiles/Released/</code>); adapt it if found. Otherwise
+clone numeric blocks from columns of the same SNMP type.</li>
+<li>Write the <code>.tpl</code>: the 3 reserved columns, one
+<code>&lt;column&gt;</code> per real OID with a
+<code>&lt;notes&gt;</code> describing the field in plain language, and
+the final <code>TBLHASH::::TBLHDR::</code> with the <code>Entry</code>
+(or <code>None</code>).</li>
+<li>Put it in
+<code>VendorProfiles/Stage/MyVendorProfile/FlexViews/My FlexViews/</code>
+and the MIB in
+<code>VendorProfiles/Stage/MyVendorProfile/MIBs/</code>.</li>
+<li>Restart the server service (see above).</li>
+<li>Check it in the UI: device context menu → <strong>FlexView</strong>
+→ it should be listed; open it on a device that implements the MIB and
+compare values with an SNMP walk (e.g. MIB Tools).</li>
+</ol>
+<h3 id="how-it-reaches-the-browser-context-only">How it reaches the
+browser (context only)</h3>
+<p>The <code>.tpl</code> is read by the Java backend
+(<code>FlexViewFactory</code>, <code>FvTable</code>,
+<code>TbModel</code>). The web UI uses DWR:
+<code>/Monitor/dwr/interface/FlexViewDwr.js</code>, with calls such as
+<code>FlexViewDwr.getFlexViewListByDevices(...)</code> and
+<code>FlexViewDwr.getTableView(query, callback)</code>. The UI entry
+point is the device context menu item "FlexView"
+(<code>actionId: chooseFlexview</code>).</p>
+<h3
+id="environment-dependencies--what-to-look-for-in-yours-6">Environment
+dependencies — what to look for in yours</h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>What we used</th>
+<th>What to identify in yours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shell on Site Engine</td>
+<td>SSH + <code>sudo</code></td>
+<td>Console or SSH access with root rights</td>
+</tr>
+<tr>
+<td>MIB files</td>
+<td>vendor MIB bundle for the firmware in use</td>
+<td>The MIB package matching your device firmware</td>
+</tr>
+</tbody>
+</table>
+<h2 class="skill">Skill <code>extreme-product-docs</code></h2>
+
+<p class="desc">Use when the user provides (or should provide) Extreme Networks product documentation — Switch Engine/Fabric Engine User Guides, Command References, EMS message catalogs, Site Engine doc collections, release notes, knowledge articles, MIBs — and whenever a CLI syntax, default, log message or feature limit must be confirmed before configuring a switch or Site Engine. Covers preparing the docs folder for search and the rules for using it.</p>
+
+<p>Claude's built-in knowledge of Extreme CLIs is not version-exact, and
+the documentation itself sometimes disagrees with the firmware. The
+reliable method: give Claude the official documents <strong>for the
+exact versions in the lab</strong>, as searchable text, and verify
+against the live CLI.</p>
+<h3 id="validated-environment-6">Validated environment</h3>
+<ul>
+<li>Linux, <code>pdftotext</code> (poppler-utils) and Python 3. Used
+with the Switch Engine 33.1.1 User Guide, Command References and EMS
+Message Catalog, and a Site Engine documentation collection (zip), while
+configuring and debugging EXOS switches and UPM/Python scripts.</li>
+</ul>
+<h3 id="1-what-to-provide">1. What to provide</h3>
+<p>Download from the Extreme documentation portal the documents matching
+the <strong>firmware and software versions in your lab</strong>
+(<code>show version</code> / <code>show sys-info</code> / Site Engine
+"About"):</p>
+<table>
+<thead>
+<tr>
+<th>Product</th>
+<th>Most useful documents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Switch Engine (EXOS)</td>
+<td>Command References, User Guide, EMS Message Catalog, Release
+Notes</td>
+</tr>
+<tr>
+<td>Fabric Engine (VOSS)</td>
+<td>Command Reference, Configuration guides (by feature area), Release
+Notes</td>
+</tr>
+<tr>
+<td>Site Engine (XIQ-SE)</td>
+<td>Documentation collection (zip): User Guide, Installation Guide, API
+docs, Release Notes</td>
+</tr>
+<tr>
+<td>ExtremeControl / ExtremeAnalytics</td>
+<td>Installation and User Guides of the engine version</td>
+</tr>
+<tr>
+<td>Any</td>
+<td>Knowledge articles (save the page as HTML), vendor MIB bundle for
+the firmware</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-prepare-the-folder">2. Prepare the folder</h3>
+<p>Put everything in a <code>docs/</code> folder of the project
+(original PDFs/zips/HTML) and run:</p>
+<pre class="bash"><code>python3 scripts/prepare_docs.py docs/</code></pre>
+<p>It unzips collections, converts each PDF with
+<code>pdftotext -layout</code> and each HTML page to <code>.txt</code>
+next to the original, and writes <code>docs/INDEX.md</code> (file,
+product, version, kind, size) with guessed values: <strong>correct the
+product/version columns by hand</strong>, since the version is what
+makes a document trustworthy for a given switch. Re-running only
+processes new files. Large documents are fine (a Command Reference is ~8
+MB of text): they are searched, not read whole.</p>
+<p>Tell Claude in the project's <code>CLAUDE.md</code> (or at the start
+of the session) that the folder exists, e.g.: "Official docs for the lab
+versions are in <code>docs/</code>, index in <code>docs/INDEX.md</code>.
+Check syntax there before configuring."</p>
+<h3 id="3-rules-for-using-it-for-claude">3. Rules for using it (for
+Claude)</h3>
+<ol type="1">
+<li><strong>Before stating or sending a command you are not certain of,
+search the matching document</strong>:
+<code>grep -n -i "&lt;command words&gt;" docs/&lt;command reference&gt;.txt</code>,
+then read the section around the hit
+(<code>sed -n '&lt;from&gt;,&lt;to&gt;p'</code>): syntax, defaults,
+usage guidelines, platform notes.</li>
+<li><strong>Match versions</strong>: use the document of the version
+running on the device; say so when only another version's document is
+available.</li>
+<li><strong>The live CLI wins</strong>: confirm with <code>?</code> /
+tab completion on the device (in a test node, not on a node someone is
+using). When the document and the firmware disagree, follow the device,
+and record the discrepancy (e.g. in <code>docs/DISCREPANCIES.md</code>)
+so it isn't rediscovered.</li>
+<li><strong>Logs</strong>: look up unknown log messages in the EMS
+Message Catalog (message name, meaning, severity) before guessing their
+cause.</li>
+<li>Cite what you used: "Command Reference 33.1.1,
+<code>enable dhcp vlan</code>, p. 2218", so a human can check it.</li>
+<li>Quote only what's needed; don't paste large parts of the documents
+into chats, tickets or public posts (they are copyrighted).</li>
+</ol>
+<p>Worked example: lab notes said
+<code>enable dhcp ipv4 vlan &lt;name&gt;</code>; the 33.1.1 Command
+Reference gives <code>enable dhcp [ipv4 | ipv6] [vlan_name | all]</code>
+(IPv4 is the default when omitted). Both agree, and the device accepted
+it, so it goes into the skill as confirmed.</p>
+<h3
+id="environment-dependencies--what-to-look-for-in-yours-7">Environment
+dependencies — what to look for in yours</h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>What we used</th>
+<th>What to identify in yours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PDF to text</td>
+<td><code>pdftotext</code> (poppler-utils)</td>
+<td>poppler for your OS, or any PDF-to-text tool keeping the layout</td>
+</tr>
+<tr>
+<td>Search</td>
+<td><code>grep</code></td>
+<td>Any text search tool Claude Code can run</td>
+</tr>
+<tr>
+<td>Documents</td>
+<td>Extreme documentation portal</td>
+<td>Access to the portal for your versions</td>
+</tr>
+</tbody>
+</table>
+<h2 class="skill">Appendix: <code>simulated-devices-in-gns3/reference/lldpd_endpoints.md</code></h2>
+
+<p>The public GNS3 appliance registry (<code>GNS3/gns3-registry</code>)
+has <strong>no</strong> IP phone or Wi-Fi access point template (the
+closest, <code>cisco-vWLC</code>, is a CAPWAP controller, useless as an
+LLDP endpoint). What worked: an <strong>Alpine container running
+<code>lldpd</code></strong> that advertises whatever LLDP identity you
+need.</p>
+<h3 id="docker-template-api-v2">Docker template (API v2)</h3>
+<pre><code>POST /v2/templates
+{&quot;template_type&quot;: &quot;docker&quot;, &quot;compute_id&quot;: &quot;local&quot;, &quot;name&quot;: &quot;Alpine-lldpd&quot;,
+ &quot;image&quot;: &quot;alpine:latest&quot;, &quot;adapters&quot;: 1, &quot;console_type&quot;: &quot;telnet&quot;, &quot;start_command&quot;: &quot;/bin/sh&quot;}</code></pre>
+<p>Without <code>"compute_id": "local"</code> the creation failed on our
+server. The server needs Internet access (or a local registry) to pull
+<code>alpine:latest</code> the first time.</p>
+<h3 id="preparing-the-container-through-its-telnet-console">Preparing
+the container (through its telnet console)</h3>
+<pre><code>udhcpc -i eth0              # DHCP address (link the container to a NAT node first)
+apk update
+apk add lldpd
+lldpd                       # start the daemon
+lldpcli show configuration</code></pre>
+<h3 id="access-point-identity-copy-of-a-real-ap">Access point identity
+(copy of a real AP)</h3>
+<pre><code>lldpcli configure system description &quot;Vendor AP Software, model-x, Test Lab AP&quot;
+lldpcli configure system platform &quot;Vendor AP&quot;
+lldpcli configure system hostname &quot;TestAP01&quot;
+lldpcli configure system capabilities enabled bridge
+lldpcli show chassis details</code></pre>
+<p>Syntax <strong>not</strong> accepted:
+<code>capabilities bridge enabled</code> and
+<code>capabilities bridge, router</code>. The valid one is
+<code>capabilities enabled bridge</code>. To suppress the Management
+Address TLV:
+<code>lldpcli configure system ip management pattern "nomatch0"</code>.</p>
+<h3 id="checking-from-switch-engine">Checking from Switch Engine</h3>
+<pre><code>restart port &lt;p&gt;                                # forces re-detection (device-detect)
+show lldp port &lt;p&gt; neighbors detailed
+show upm history detail                         # with a UPM profile attached: EVENT.DEVICE received
+show log                                        # UPM.Msg.LLDPDevDetected ... device type is &lt;TYPE&gt;(&lt;n&gt;)</code></pre>
+<h3 id="known-limitation-unresolved">Known limitation (unresolved)</h3>
+<p>With <code>Enabled Capabilities: Bridge</code>, EXOS 32.6.3
+classified the <code>lldpd</code> endpoint as
+<strong><code>ROUTER</code></strong>, not <code>BRIDGE</code>, while a
+real AP with the same capability shows as <code>BRIDGE</code>. Ruled
+out: an explicit Router capability; the container's
+<code>ip_forward</code> (<code>sysctl -w net.ipv4.ip_forward=0</code>);
+the Management Address TLV.</p>
+<p><strong>Consequence:</strong> to test device-type filters
+(<code>$EVENT.DEVICE</code>), temporarily accept <code>ROUTER</code> in
+the lab and flag it in the code, or use real hardware.
+<code>lldpd</code> is fine to test the <strong>mechanism</strong>
+(trigger, arguments, MAC guard, configuration applied and reverted) but
+does not reproduce EXOS's internal classification exactly.</p>
+<h3 id="lldp-med-phones">LLDP-MED phones</h3>
+<p><code>lldpd</code> can advertise LLDP-MED (device class, network
+policies). <strong>Not tested by us</strong> (a real phone was used). If
+you try it, first check which <code>$EVENT.DEVICE</code> value EXOS
+receives.</p>
+<h2 class="skill">Appendix: validation log</h2>
+
+<p>Evidence behind the "validated" claims in this pack. Figures are
+functional observations, not performance measurements.</p>
+<h3 id="environment">Environment</h3>
+<ul>
+<li>GNS3 server 2.2.45 (API v2) on a Linux x86_64 host with KVM, one
+<code>local</code> compute.</li>
+<li>Client: Linux, Python 3 (standard library), <code>curl</code>.</li>
+</ul>
+<h3 id="live-test-fabric-engine-from-github-2026-09-30">Live test:
+Fabric Engine from GitHub (2026-09-30)</h3>
+<p>Throwaway project, deleted afterwards. Steps, all through the API
+from the client:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Download <code>FEGNS3.9.4.0.0.qcow2</code> from the URL in
+<code>VOSSGNS3-V9.X.gns3a</code></td>
+<td>md5 <code>341aef71e2dbb976e6fa6369b363789e</code> matches the
+appliance file</td>
+</tr>
+<tr>
+<td><code>gns3a_to_template.py VOSSGNS3-V9.X.gns3a --version 9.4.0.0 --upload-image … --post &lt;GNS3_HOST&gt;</code></td>
+<td>image uploaded via <code>POST /v2/compute/qemu/images/…</code>,
+template "FabricEngine VM 9.4.0.0" created</td>
+</tr>
+<tr>
+<td>2 × Fabric Engine + 1 × Switch Engine (EXOS VM 32.6.3.126) from
+templates</td>
+<td>nodes created with 33 (VOSS) and 13 (EXOS) ports, names from the
+template</td>
+</tr>
+<tr>
+<td>Links FE1 1/1↔︎FE2 1/1, FE2 1/24↔︎EXOS Port1</td>
+<td>Fabric Engine boots to <code>Login:</code> in about 2-3 min; 1/1
+goes Auto-Sense <code>NNI-ISIS-UP</code> (SPBM adjacency) with no
+configuration; EXOS sees FE2 <code>1/24</code> by LLDP; FE2 detects EXOS
+as a Fabric Attach proxy</td>
+</tr>
+<tr>
+<td>First Fabric Engine login <code>rwa/rwa</code></td>
+<td>forced password change ("initial attempt using the default
+password")</td>
+</tr>
+<tr>
+<td><code>save config</code></td>
+<td><code>Save config to file /intflash/config.cfg successful</code></td>
+</tr>
+<tr>
+<td>Adapters 25 / 29 / 32 (named <code>1/25/1</code>,
+<code>1/26/1</code>, <code>1/26/4</code> by the appliance)</td>
+<td>25 → VOSS port 1/25 (40G, up, LLDP), 29 → 1/26 (up, LLDP), 32 → no
+link. Without channelization only adapters 25 and 29 are usable</td>
+</tr>
+<tr>
+<td>Node options without <code>-cpu host</code></td>
+<td>Fabric Engine 9.4.0.0 boots normally. Switch Engine 32.6.3.126
+<strong>stops in its bootloader menu</strong> (<code>~&gt;</code>
+prompt, "c) continue with boot process")</td>
+</tr>
+<tr>
+<td>Real QEMU command lines (<code>command_line</code> in the node
+API)</td>
+<td>GNS3 adds <code>-enable-kvm</code> to every QEMU node by itself; the
+appliance's own <code>-enable-kvm</code> is rewritten to
+<code>-machine accel=kvm</code> (redundant, no extra effect)</td>
+</tr>
+<tr>
+<td>EXOS <code>save</code> then <code>answer y</code> with
+<code>gns3_console.py</code></td>
+<td><code>Configuration saved to primary.cfg successfully</code></td>
+</tr>
+<tr>
+<td>Fresh EXOS VM: login during <code>(pending-AAA)</code></td>
+<td><code>Failed to connect to authentication service ... Login incorrect</code>;
+works once "AAA ... is now available" is printed</td>
+</tr>
+<tr>
+<td>EXOS first-boot security wizard</td>
+<td>quit with <code>answer q --wizard</code>; defaults kept</td>
+</tr>
+<tr>
+<td><code>backup_configs.py &lt;GNS3_HOST&gt; &lt;dir&gt; SW1=&lt;port&gt; --save</code>
+(separate throwaway EXOS project)</td>
+<td>switch saved (prompt loses <code>*</code>), 249-line
+<code>show configuration</code> written, with the changes made just
+before</td>
+</tr>
+<tr>
+<td>Console line endings</td>
+<td><code>\r\n</code> counts as two lines on both EXOS and VOSS consoles
+(an empty password was sent); <code>\r</code> works</td>
+</tr>
+</tbody>
+</table>
+<h3
+id="live-test-simulated-devices-around-switch-engine-2026-09-30">Live
+test: simulated devices around Switch Engine (2026-09-30)</h3>
+<p>Throwaway project, deleted afterwards: EXOS VM 32.6.3.126, a GNS3
+<code>nat</code> node behind an <code>ethernet_switch</code> for package
+installs, <code>alpine:latest</code> containers with 2-3 interfaces.</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FreeRADIUS 3 (<code>freeradius</code>,
+<code>freeradius-eap</code>)</td>
+<td>fails to start until <code>certs/bootstrap</code> creates the TLS
+certificates
+(<code>rlm_eap_tls: Failed initializing SSL context</code>)</td>
+</tr>
+<tr>
+<td>EXOS <code>enable netlogin dot1x</code></td>
+<td><code>Error: No NetLogin VLAN is configured.</code> until
+<code>configure netlogin vlan &lt;vlan&gt;</code></td>
+</tr>
+<tr>
+<td><code>wpa_supplicant -D wired</code>, EAP-MD5, on EXOS port 2</td>
+<td><code>EAP state=SUCCESS</code>,
+<code>suppPortStatus=Authorized</code>; EXOS
+<code>show netlogin port 2</code>:
+<code>Yes, Radius 802.1x testuser</code>; RADIUS
+<code>Access-Accept</code></td>
+</tr>
+<tr>
+<td>Same with a wrong password</td>
+<td><code>EAP state=FAILURE</code>, <code>Access-Reject</code>, EXOS
+shows <code>No</code></td>
+</tr>
+<tr>
+<td>FRR (<code>frr</code>) OSPF on EXOS port 3</td>
+<td>EXOS <code>show ospf neighbor</code>: 2.2.2.2 <code>FULL</code>;
+each side learns the other's /32 loopback; ping between loopbacks
+OK</td>
+</tr>
+<tr>
+<td>VLAN subinterface <code>eth1.20</code> ↔︎ EXOS tagged VLAN 20</td>
+<td>ping OK</td>
+</tr>
+<tr>
+<td>Bond <code>802.3ad</code> (2 links) ↔︎ EXOS
+<code>enable sharing ... lacp</code></td>
+<td>container sees the switch as partner; EXOS stays
+<code>Selected</code>/<code>Waiting</code>, aggregator count 0, no
+traffic</td>
+</tr>
+<tr>
+<td>Bond <code>balance-xor</code> ↔︎ EXOS static sharing</td>
+<td>no traffic; EXOS ports 4-5 link state flapping
+(<code>A</code>/<code>R</code>) after container interface changes</td>
+</tr>
+<tr>
+<td><code>wpa_supplicant -f &lt;file&gt;</code> on Alpine</td>
+<td>option not available in that build (prints usage)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="validated-in-earlier-lab-work-2026">Validated in earlier lab
+work (2026)</h3>
+<ul>
+<li>Switch Engine 32.6.3.126: 13-port official template and a 25-adapter
+(24 data ports) extension; multi-switch labs with saved configs,
+<code>default.xsf</code>, TFTP, SNMP; <code>.xos</code> image install on
+the secondary partition and switching boot image (32.7.2.19 ↔︎
+32.6.3.126); UPM/Python scripts with Alpine + lldpd endpoints.</li>
+<li>Site Engine (XIQ-SE) 24.2.15.5 as a QEMU VM in GNS3: switch
+discovery by SNMP, firmware repository, FlexViews, MIB Tools,
+clone/resize/compaction of its disks, 8 GB/2 vCPU and 16 GB/4 vCPU
+instances.</li>
+</ul>
+<h3 id="not-validated">Not validated</h3>
+<ul>
+<li>Simulated devices other than those in the table above (BGP,
+DHCP/DNS, syslog, traffic tools, PEAP, MAC-auth, LLDP-MED); any of them
+against Fabric Engine.</li>
+<li>ExtremeControl and ExtremeAnalytics (no OVA available at the
+time).</li>
+<li>Fabric Engine beyond the steps above (services, SPBM L2/L3 VSNs,
+DvR, upgrades).</li>
+<li>GNS3 3.x (API v3).</li>
+</ul>
+<h2 id="appendix-scripts-in-the-zip">Appendix: scripts in the zip</h2>
+<ul>
+<li><code>extreme-product-docs/scripts/prepare_docs.py</code>: Prepare
+Extreme product documentation so Claude Code can search it.</li>
+<li><code>extreme-switch-templates/scripts/gns3a_to_template.py</code>:
+Turn a GNS3 appliance file (.gns3a) into a template for a remote GNS3
+server (API v2).</li>
+<li><code>gns3-server-api/scripts/gns3_console.py</code>: Talk to the
+telnet console of a GNS3 node (Switch Engine/EXOS, Fabric
+Engine/VOSS,</li>
+<li><code>switch-engine-in-gns3/scripts/backup_configs.py</code>: Save
+and back up the running configuration of several Switch Engine (EXOS) or
+Fabric</li>
+</ul>
+<h2 id="license">License</h2>
+<p>Text: CC BY 4.0. Scripts: MIT. See <code>LICENSE</code>. Extreme
+Networks product names and images belong to Extreme Networks; this is a
+community contribution, not an official Extreme Networks product.</p>
+<p>Contributed by Salva Ferrer (AVTN, aquivatunombre.es).</p>
+
+</body></html>
