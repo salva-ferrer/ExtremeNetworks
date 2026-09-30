@@ -12,6 +12,7 @@ Community material for building and running **Extreme Networks labs on GNS3**, d
 | [`extreme-gns3-skills/dist/`](extreme-gns3-skills/dist/) | Ready to use: the skills as a `.zip`, and a guide as PDF and HTML. |
 | [`extreme-gns3-skills/VALIDATION.md`](extreme-gns3-skills/VALIDATION.md) | What was tested, on which versions, and the results. |
 | [`extreme-gns3-skills/src/`](extreme-gns3-skills/src/) | Script and intro text used to build the guide in `dist/`. |
+| [`UPM/`](UPM/) | EXOS Universal Port Manager scripts that auto-configure access ports for IP phones (ToIP) and WiFi APs detected by LLDP, discovering VLANs by name. Python and CLI (`.xsf`) versions. |
 
 ### The skills
 

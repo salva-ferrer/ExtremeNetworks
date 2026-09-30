@@ -1,0 +1,43 @@
+# phone_detect.xsf - UPM auto-configuration for IP phones (ToIP), EXOS CLI scripting version.
+# Invoke from a UPM profile: load script phone_detect.xsf <connect|disconnect>
+# Once per switch: configure diffserv examination code-point 46 qosprofile qp8
+#                  configure diffserv examination code-point 32 qosprofile qp8   (voice signalling)
+# Voice VLAN: discovered from "show vlan" by name (first VLAN containing "toip" or "voice",
+# case-insensitive). Adapt the regexp below to your naming convention.
+# Disconnect guard: the undetect is ignored if the phone's MAC still appears in the LLDP
+# neighbour detail of the port. The MAC format in LLDP fields is not fixed (with or without
+# colons, depending on the field and the device), so the colons of $(EVENT.DEVICE_MAC) are
+# made optional (":?") in the search pattern instead of removed.
+set var CLI.OUT " "
+show vlan
+set var voicevlanmatch $TCL(regexp -nocase -inline {(\S*(?:toip|voice)\S*)} ${CLI.OUT})
+set var voicevlan $TCL(lindex ${voicevlanmatch} 1)
+IF ("$(CLI.ARGV1)" == "connect") THEN
+IF ("$(EVENT.DEVICE)" == "GEN_TEL_PHONE") THEN
+create log message Voice_Device_Detected_on_$(EVENT.USER_PORT)
+configure vlan $(voicevlan) add port $(EVENT.USER_PORT) tagged
+configure lldp ports $(EVENT.USER_PORT) advertise vendor-specific med capabilities
+configure lldp ports $(EVENT.USER_PORT) advertise vendor-specific dot1 vlan-name vlan $(voicevlan)
+configure lldp ports $(EVENT.USER_PORT) advertise vendor-specific med policy application voice vlan $(voicevlan) dscp 46
+configure lldp ports $(EVENT.USER_PORT) advertise vendor-specific med power-via-mdi
+configure inline-power operator-limit $(EVENT.DEVICE_POWER) ports $(EVENT.USER_PORT)
+enable diffserv examination ports $(EVENT.USER_PORT)
+ENDIF
+ELSE
+set var CLI.OUT " "
+show lldp port $(EVENT.USER_PORT) neighbors detailed
+set var macpattern $TCL(regsub -all {:} {$(EVENT.DEVICE_MAC)} {:?})
+set var macfound $TCL(regexp -nocase "$(macpattern)" ${CLI.OUT})
+IF ($(macfound) == 1) THEN
+create log message Voice_Undetect_Ignored_on_$(EVENT.USER_PORT)
+ELSE
+create log message Voice_Device_Removed_from_$(EVENT.USER_PORT)
+disable diffserv examination ports $(EVENT.USER_PORT)
+configure lldp ports $(EVENT.USER_PORT) no-advertise vendor-specific med policy application voice vlan $(voicevlan) dscp 46
+configure lldp ports $(EVENT.USER_PORT) no-advertise vendor-specific dot1 vlan-name vlan $(voicevlan)
+configure lldp ports $(EVENT.USER_PORT) no-advertise vendor-specific med power-via-mdi
+configure lldp ports $(EVENT.USER_PORT) no-advertise vendor-specific med capabilities
+unconfigure inline-power operator-limit ports $(EVENT.USER_PORT)
+configure vlan $(voicevlan) delete port $(EVENT.USER_PORT)
+ENDIF
+ENDIF
