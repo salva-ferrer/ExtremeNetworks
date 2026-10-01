@@ -1,0 +1,62 @@
+# edge_guard.pol - REFERENCE VARIANT (only conditions verified with real traffic on EXOS-VM 32.6.3.126).
+#
+# Edge guard for EXOS / Switch Engine: disable an access port when a protocol that only a switch sends arrives on it.
+# No STP and no link-type edge required. One entry per protocol ('if match any' with different fields does not work in ACLs).
+# Every entry logs -> EMS filter "matches rule edge_" -> UPM log target edge_guard -> profile -> edge_guard.py
+# Apply: configure access-list edge_guard ports <access-ports> ingress   (after editing the file: refresh policy edge_guard)
+# 'mirror-cpu': no effect on EXOS-VM; the User Guide requires it to log fast-path traffic on hardware.
+
+# IEEE STP / RSTP / MSTP: LLC 42 42 03 (version 00/02/03 inside the BPDU). VERIFIED (EXOS-VM).
+entry edge_stp {
+    if {
+        destination-sap 0x42;
+        source-sap 0x42;
+    } then {
+        deny;
+        count edge_stp;
+        log;
+        mirror-cpu;
+    }
+}
+
+# VOSS/Fabric Engine SLPP (ethertype 0x8102). VERIFIED against a real Fabric Engine 9.4 (EXOS-VM).
+entry edge_slpp {
+    if {
+        ethernet-type 0x8102;
+    } then {
+        deny;
+        count edge_slpp;
+        log;
+        mirror-cpu;
+    }
+}
+
+# OPTIONAL EXIT VALVE for Cisco IP telephony and Cisco APs (CDP) - COMMENTED OUT (DISABLED) BY DEFAULT.
+# edge_snap blocks every LLC/SNAP frame, including the CDP sent by Cisco IP phones and Cisco access points.
+# Enable this entry ONLY if blocking CDP causes problems with Cisco IP telephony or Cisco APs on these ports:
+# it permits CDP (SNAP type 0x2000) BEFORE edge_snap, so those devices no longer shut the port down,
+# while VTP, DTP, PAgP, UDLD and PVST+ are still caught. Caveat: snap-type does not check the OUI, so
+# Foundry FDP (OUI 00:E0:52, also type 0x2000) would be permitted too.
+# MUST BE VERIFIED ON THE TARGET HARDWARE FIRST: we could not verify it - on EXOS-VM 'snap-type' is
+# accepted but never matches. See README, section Verification.
+# To enable it, remove the leading '# ' from the 7 lines below.
+# entry allow_cdp {
+#     if {
+#         snap-type 0x2000;
+#     } then {
+#         permit;
+#     }
+# }
+
+# Any LLC/SNAP frame (covers EDP/ELRP and all Cisco protocols). VERIFIED (EXOS-VM). NOTE: also catches CDP from Cisco IP phones/APs (see allow_cdp).
+entry edge_snap {
+    if {
+        destination-sap 0xaa;
+        source-sap 0xaa;
+    } then {
+        deny;
+        count edge_snap;
+        log;
+        mirror-cpu;
+    }
+}

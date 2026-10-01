@@ -13,6 +13,7 @@ Community material for building and running **Extreme Networks labs on GNS3**, d
 | [`extreme-gns3-skills/VALIDATION.md`](extreme-gns3-skills/VALIDATION.md) | What was tested, on which versions, and the results. |
 | [`extreme-gns3-skills/src/`](extreme-gns3-skills/src/) | Script and intro text used to build the guide in `dist/`. |
 | [`UPM/`](UPM/) | EXOS Universal Port Manager scripts that auto-configure access ports for IP phones (ToIP) and WiFi APs detected by LLDP, discovering VLANs by name. Python and CLI (`.xsf`) versions. |
+| [`edge-guard-exos/`](edge-guard-exos/) | EXOS «edge guard» without STP: an ACL policy (LLC SAP / SNAP / ethertype, no MAC) logs switch-only protocols (STP/RSTP/MSTP, EDP/ELRP, Cisco SNAP protocols, SLPP) and a UPM profile + Python script disables the access port. Verification status and test results included. |
 
 ### The skills
 

@@ -1,0 +1,14 @@
+# uninstall.txt - remove the edge guard (EXOS / Switch Engine)
+# Remove the policy from every port it is applied to (verified on EXOS-VM 32.6.3.126):
+unconfigure access-list edge_guard ingress
+# (alternative: "unconfigure access-list ports <list> ingress" removes ALL ACLs from those ports)
+# Note: "configure access-list delete ... ports" only works for dynamic ACLs, not for .pol policies.
+disable log target upm edge_guard
+delete log target upm edge_guard
+delete log filter edge_f
+delete upm profile edge_guard
+rm edge_guard.pol
+rm edge_guard.py
+# Re-enable by hand any port the guard has disabled:
+enable port <ports>
+save
