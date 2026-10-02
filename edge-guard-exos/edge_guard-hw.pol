@@ -5,7 +5,7 @@
 # Edge guard for EXOS / Switch Engine: disable an access port when a protocol that only a switch sends arrives on it.
 # No STP and no link-type edge required. One entry per protocol ('if match any' with different fields does not work in ACLs).
 # Every entry logs -> EMS filter "matches rule edge_" -> UPM log target edge_guard -> profile -> edge_guard.py
-# Apply: configure access-list edge_guard ports <access-ports> ingress   (after editing the file: refresh policy edge_guard)
+# Install: load script install.xsf ; apply to ports by hand: see apply.txt (after editing the file: refresh policy edge_guard)
 # 'mirror-cpu': no effect on EXOS-VM; the User Guide requires it to log fast-path traffic on hardware.
 
 # IEEE STP / RSTP / MSTP: LLC 42 42 03 (version 00/02/03 inside the BPDU). VERIFIED (EXOS-VM).

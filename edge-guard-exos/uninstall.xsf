@@ -1,0 +1,8 @@
+# uninstall.xsf - remove the edge guard accessories created by install.xsf (EXOS / Switch Engine).
+# First remove the policy from the ports (apply.txt, "Remove"), otherwise frames keep being denied.
+# Usage:  load script uninstall.xsf      then save.
+disable log target upm edge_guard
+delete log target upm edge_guard
+delete log filter edge_f
+delete upm profile edge_guard
+create log message edge_guard_uninstall.xsf_done

@@ -1,4 +1,4 @@
-# Test results — edge guard (EXOS-VM 32.6.3.126, 2026-10-01)
+# Test results — edge guard (EXOS-VM 32.6.3.126, 2026-10-01; deployment 2026-10-02)
 
 **Test bed** (GNS3 lab with EXOS-VM):
 - **Switch A**, the protected one, with **STP disabled**.
@@ -162,3 +162,33 @@ every 5 s). The outcome therefore depends on the relative timing of CDP and LLDP
 and on the EMS→UPM latency, i.e. on race conditions. Real phones may behave differently (LLDP-MED fast
 start), but that would have to be checked device by device. The recommended alternative is the
 `allow_cdp` exit valve in the ACL (README §4.1), pending hardware verification of `snap-type`.
+
+## 11. Deployment with `install.xsf` / `uninstall.xsf` (2026-10-02)
+
+**Test bed:** a temporary GNS3 project with a single, freshly booted EXOS-VM 32.6.3.126 (no
+traffic: the policy → EMS → UPM → script chain is already verified in §4 and §6). Files copied with
+`edit policy` / `edit script` on the console.
+
+| Step | Result |
+|---|---|
+| `show security python` on a fresh EXOS-VM | `On` (current and configured) |
+| `check policy edge_guard` | `Policy file check successful.` |
+| `load script install.xsf` (first install) | Profile, filter and target created. `show configuration upm` shows the profile body **verbatim**: `$TCL(...)`, `${EVENT.LOG_PARAM_0}` and `$s $p $r` are not expanded at install time. Target `Enabled : yes`, filter `edge_f` on `Kern Info`, string `matches rule edge_` |
+| `configure access-list edge_guard ports 1-4 ingress` (`apply.txt`) | `done!`; `show access-list port 1 ingress` lists `edge_stp`, `edge_slpp`, `edge_snap`. `show access-list port 1-4 ingress` is rejected (one port only) |
+| `run script edge_guard.py 1 3 edge_stp` | `1:3` rejected on a standalone switch, fallback to `3`: port 3 `D`, log `edge_guard.py: edge_stp on port 3, port disabled` |
+| Script with slot 2 on a standalone switch (`2:17`) | No fallback (slot ≠ 1): log `edge_guard.py: error while disabling port 2:17`, no port touched |
+| Profile regsubs on `IP Packet from 2:17 (vlanId=1) matches rule edge_snap: …` (CLI scripting) | `s = 2`, `p = 17`, `r = edge_snap` |
+| `unconfigure access-list edge_guard ingress` + `load script uninstall.xsf` | Policy unbound from ports 1-4; `show configuration upm` empty; target and filter gone |
+| Fresh install after uninstall | Four expected errors from the leading deletes (objects do not exist), then everything created |
+| `install.xsf` re-run over an existing install | No errors, profile identical, no script execution |
+
+**Pitfall found and fixed:** the first version of `install.xsf` had no leading deletes. Re-running it
+over an existing install made `create upm profile edge_guard` fail (`Name edge_guard is already in
+use`), and EXOS then executed the **profile body as live commands**: the three `set var` lines
+failed (`can't read "EVENT.LOG_PARAM_0"`), but `load script edge_guard.py $s $p $r` **ran** with the
+values left in `s`, `p`, `r` from an earlier CLI session (log: `edge_guard.py: error while disabling
+port 2:17`). With other leftover values it would have disabled a real port. `install.xsf` now
+deletes the previous accessories first.
+
+Not tested: a stack (the `<slot>:<port>` path of the script), and persistence across `save` +
+reboot (the profile is saved in the configuration like any other UPM profile).

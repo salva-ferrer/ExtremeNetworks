@@ -7,9 +7,10 @@ Self-contained package: it can be copied or moved anywhere. Contents:
 | `edge_guard.pol` | **Reference** ACL policy: one entry per protocol, using only conditions verified with real traffic. It also contains an optional, commented-out exit valve for Cisco CDP (§4.1). |
 | `edge_guard-hw.pol` | **Experimental** ACL policy: specific SNAP-type signatures instead of the generic SNAP rule. Do not use it until `snap-type` has been verified on the target hardware. |
 | `edge_guard.py` | Python script run by the UPM profile: disables the port and writes a log message. |
-| `install.txt` | Configuration snippet: UPM profile, EMS filter, log target and policy binding. |
-| `uninstall.txt` | How to remove it. |
-| `RESULTS.md` | Test evidence (EXOS-VM 32.6.3.126 and Fabric Engine 9.4, 2026-10-01). |
+| `install.xsf` | EXOS CLI script that creates the accessories: UPM profile, EMS log filter and UPM log target. It does **not** apply the policy to any port. |
+| `uninstall.xsf` | Removes the accessories created by `install.xsf`. |
+| `apply.txt` | Manual commands to apply the policy to the chosen access ports, refresh it, re-enable a port and remove everything. |
+| `RESULTS.md` | Test evidence (EXOS-VM 32.6.3.126 and Fabric Engine 9.4, 2026-10-01; deployment, 2026-10-02). |
 
 ## 0. Summary
 
@@ -61,9 +62,9 @@ arrives on port         │   (the frame goes to the CPU and is not forwarded)
                         │   EMS filter edge_f: kern.info match string "matches rule edge_"
                         ▼
       UPM log target edge_guard ──► UPM profile edge_guard
-                        │   regsub → p = <port>, r = edge_<protocol>
+                        │   regsub → s = <slot>, p = <port>, r = edge_<protocol>
                         ▼
-      load script edge_guard.py $p $r ──► disable port <p>
+      load script edge_guard.py $s $p $r ──► disable port <s>:<p>  (standalone: <p>)
                                        └► create log message "edge_guard.py: <rule> on port <p>, port disabled"
 ```
 
@@ -178,25 +179,36 @@ placed before `edge_snap`:
 
 ## 5. Installation
 
-Requirements: EXOS/Switch Engine with Python scripting (≥ 32.2) and UPM, which depends on the
-platform licence (see the Licensing Guide). Tested on EXOS-VM 32.6.3.126.
+Requirements: EXOS/Switch Engine with Python scripting (≥ 32.2; `show security python` must say
+`On`, which is the default on EXOS-VM 32.6.3.126) and UPM, which depends on the platform licence
+(see the Licensing Guide). Tested on EXOS-VM 32.6.3.126.
 
-1. **Copy the files to the switch flash**, either:
+1. **Copy the files to the switch flash** (`edge_guard.pol`, `edge_guard.py`, `install.xsf`,
+   `uninstall.xsf`), either:
    - via TFTP/SCP: `tftp get <server> edge_guard.pol` (add `vr VR-Mgmt` or another VR if needed; or
-     `scp2 …`), and the same for `edge_guard.py`. If you use `edge_guard-hw.pol`, save it on the switch
-     as `edge_guard.pol`;
-   - or on the switch itself: `edit policy edge_guard.pol` and `edit script edge_guard.py` (vi editor:
-     `i`, paste, `Esc`, `:wq`).
+     `scp2 …`), and the same for the other files. If you use `edge_guard-hw.pol`, save it on the
+     switch as `edge_guard.pol`;
+   - or on the switch itself: `edit policy edge_guard`, `edit script edge_guard.py`,
+     `edit script install.xsf`, `edit script uninstall.xsf` (vi editor: `i`, paste, `Esc`, `:wq`).
+     `edit` opens an existing file with its old content: `rm` it first (it asks `(y/N)`).
 2. `check policy edge_guard` → it must answer `Policy file check successful.`
-3. Paste `install.txt`, replacing `<access-ports>`.
-4. Verify (§6) and `save`.
+3. `load script install.xsf` creates the UPM profile `edge_guard`, the log filter `edge_f` and the
+   UPM log target `edge_guard`. It applies nothing to the ports. It can be re-run (e.g. after an
+   update): it starts by deleting the previous accessories, so on a first install it prints four
+   expected errors for those deletes.
+4. Apply the policy to the access ports by hand, with the command in `apply.txt`:
+   `configure access-list edge_guard ports <access-ports> ingress`.
+5. Verify (§6) and `save`.
 
 **If the policy is edited later,** run `refresh policy edge_guard`; otherwise the previous version
-stays applied.
+stays applied. **To uninstall,** follow the "Remove" block of `apply.txt` (take the policy off the
+ports, then `load script uninstall.xsf`).
 
 ## 6. Verification
 
-- `show access-list port <p> ingress`: the `edge_*` entries are listed.
+- `show configuration upm`: the profile `edge_guard` with its four lines, exactly as in `install.xsf`.
+- `show log configuration target upm edge_guard`: `Enabled : yes`, `Filter Name : edge_f`.
+- `show access-list port <p> ingress` (one port; a list is rejected): the `edge_*` entries are listed.
 - `show access-list counter`: one counter per entry.
 - `show upm history`: `Log-Message(edge_f)  edge_guard  Pass`. `show upm history exec-id <n>` shows
   the executed script with its variables filled in; it is the best debugging tool.
@@ -231,8 +243,16 @@ Automatic re-enabling could be built with a UPM timer; it is not included or tes
 - **IGMP snooping:** the User Guide 33.1.1 (p. 800-801) warns that an ACL with a MAC condition breaks
   IGMP snooping. On EXOS-VM **it does not reproduce**, but it is not verified on hardware. This policy
   uses no MAC conditions.
-- **Only the port and the rule are passed to the script.** Passing the whole `${EVENT.LOG_PARAM_0}`
-  breaks the CLI (`%% Invalid input`) because of the parentheses in the text.
+- **Only the slot, the port and the rule are passed to the script.** Passing the whole
+  `${EVENT.LOG_PARAM_0}` breaks the CLI (`%% Invalid input`) because of the parentheses in the text.
+- **Slot and port:** the log always says `from <slot>:<port>` (`1:<port>` on a standalone switch).
+  The script first tries `disable port <slot>:<port>` (stack) and, only when the slot is 1, falls
+  back to `disable port <port>` (standalone, where `1:<port>` is rejected). The standalone path is
+  verified; the stack path is not (no stack in the lab).
+- **Never re-create the UPM profile with a bare `create upm profile` in a script when it already
+  exists:** the command fails and EXOS executes the profile body as normal commands, including
+  `load script edge_guard.py` with whatever values `s`, `p` and `r` hold. That is why
+  `install.xsf` deletes the previous accessories first (RESULTS §11).
 - **Log messages from a profile:** the command is `create log message`; `create log entry` does not
   exist. A variable inside quotes is not expanded; without quotes, it is.
 - **Dependencies:** it relies on the CPU, EMS and the script. If something fails, there is no

@@ -1,0 +1,27 @@
+# apply.txt - apply the edge guard policy to access ports (EXOS / Switch Engine), by hand.
+# Prerequisite: install.xsf already run (load script install.xsf). Replace <access-ports>.
+
+# Apply the policy on the ingress of the access ports (only access ports, never uplinks/ISC/LAGs
+# towards other switches):
+configure access-list edge_guard ports <access-ports> ingress
+# Check (one port at a time: a port list is rejected):
+show access-list port <port> ingress
+save
+
+# After editing edge_guard.pol on the switch, reload it (otherwise the old version stays applied):
+refresh policy edge_guard
+
+# Re-enable a port the guard has disabled (it goes down again if the switch is still there):
+enable port <port>
+
+# Remove: take the policy off every port it is applied to (verified on EXOS-VM 32.6.3.126)
+unconfigure access-list edge_guard ingress
+# (alternative: "unconfigure access-list ports <list> ingress" removes ALL ACLs from those ports)
+# Note: "configure access-list delete ... ports" only works for dynamic ACLs, not for .pol policies.
+# Then remove the accessories and the files:
+load script uninstall.xsf
+rm edge_guard.pol
+rm edge_guard.py
+rm install.xsf
+rm uninstall.xsf
+save
