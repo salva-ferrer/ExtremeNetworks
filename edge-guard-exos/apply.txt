@@ -1,17 +1,25 @@
-# apply.txt - apply the edge guard policy to access ports (EXOS / Switch Engine), by hand.
-# Prerequisite: install.xsf already run (load script install.xsf). Replace <access-ports>.
+# apply.txt - apply the edge guard policy to access ports (EXOS / Switch Engine).
+# Prerequisite: install.xsf already run (load script install.xsf).
+# <list>: commas, ranges or both, e.g. 1,3-5,8 (stack: 2:3, 2:1-4, 2:1-2:4). Only access ports,
+# never uplinks/ISC/LAGs towards other switches.
 
-# Apply the policy on the ingress of the access ports (only access ports, never uplinks/ISC/LAGs
-# towards other switches):
-configure access-list edge_guard ports <access-ports> ingress
+# Apply / remove the policy port by port, with one report line per port. Ports already in the
+# requested state are skipped, and one port failing does not stop the others. It does not save.
+run script edge_guard.py enable port <list>
+run script edge_guard.py disable port <list>
+save
+
+# Manual equivalent (what the script runs for each port):
+#   configure access-list edge_guard ports <p> ingress
+#   unconfigure access-list edge_guard ports <p> ingress    (per-port removal: NOT yet verified in the lab)
 # Check (one port at a time: a port list is rejected):
 show access-list port <port> ingress
-save
 
 # After editing edge_guard.pol on the switch, reload it (otherwise the old version stays applied):
 refresh policy edge_guard
 
-# Re-enable a port the guard has disabled (it goes down again if the switch is still there):
+# Re-enable a port the guard has disabled (it goes down again if the switch is still there).
+# "edge_guard.py disable port" does NOT do this: it only removes the policy.
 enable port <port>
 
 # Remove: take the policy off every port it is applied to (verified on EXOS-VM 32.6.3.126)

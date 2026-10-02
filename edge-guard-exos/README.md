@@ -6,10 +6,11 @@ Self-contained package: it can be copied or moved anywhere. Contents:
 |---|---|
 | `edge_guard.pol` | **Reference** ACL policy: one entry per protocol, using only conditions verified with real traffic. It also contains an optional, commented-out exit valve for Cisco CDP (§4.1). |
 | `edge_guard-hw.pol` | **Experimental** ACL policy: specific SNAP-type signatures instead of the generic SNAP rule. Do not use it until `snap-type` has been verified on the target hardware. |
-| `edge_guard.py` | Python script run by the UPM profile: disables the port and writes a log message. |
+| `edge_guard.py` | Python script with two modes: run by the UPM profile, it disables the port and writes a log message; run by hand (`run script edge_guard.py enable\|disable port <list>`), it applies or removes the policy on a list of ports (§5). |
+| `tests/` | Offline tests for `edge_guard.py` with a fake `exsh` (on a PC: `python3 -m pytest tests/`). Not copied to the switch. |
 | `install.xsf` | EXOS CLI script that creates the accessories: UPM profile, EMS log filter and UPM log target. It does **not** apply the policy to any port. |
 | `uninstall.xsf` | Removes the accessories created by `install.xsf`. |
-| `apply.txt` | Manual commands to apply the policy to the chosen access ports, refresh it, re-enable a port and remove everything. |
+| `apply.txt` | Commands to apply the policy to the chosen access ports, refresh it, re-enable a port and remove everything. |
 | `RESULTS.md` | Test evidence (EXOS-VM 32.6.3.126 and Fabric Engine 9.4, 2026-10-01; deployment, 2026-10-02). |
 
 ## 0. Summary
@@ -196,8 +197,16 @@ Requirements: EXOS/Switch Engine with Python scripting (≥ 32.2; `show security
    UPM log target `edge_guard`. It applies nothing to the ports. It can be re-run (e.g. after an
    update): it starts by deleting the previous accessories, so on a first install it prints four
    expected errors for those deletes.
-4. Apply the policy to the access ports by hand, with the command in `apply.txt`:
-   `configure access-list edge_guard ports <access-ports> ingress`.
+4. Apply the policy to the access ports:
+   `run script edge_guard.py enable port <list>`, where `<list>` takes commas, ranges or both
+   (`1,3-5,8`; stack: `2:3`, `2:1-4`, `2:1-2:4`). It goes port by port:
+   - ports that already have the policy are skipped (`already applied`);
+   - one failing port does not stop the others;
+   - it prints one line per port and writes a summary to the log.
+
+   `run script edge_guard.py disable port <list>` removes the policy from those ports only. It does
+   **not** re-enable a port the guard has disabled: use `enable port <p>` for that (§7). Neither
+   command saves. The manual equivalent is in `apply.txt`.
 5. Verify (§6) and `save`.
 
 **If the policy is edited later,** run `refresh policy edge_guard`; otherwise the previous version
@@ -238,8 +247,9 @@ Automatic re-enabling could be built with a UPM timer; it is not included or tes
   natively. Not verified on hardware.
 - **`deny` with `count`:** they work together on ingress (verified). The User Guide restriction is for
   egress only, and only on some platforms. `packet-count <name>` is an equivalent modifier.
-- **Removing the policy:** `unconfigure access-list edge_guard ingress`. `configure access-list
-  delete …` only works for dynamic ACLs.
+- **Removing the policy:** `unconfigure access-list edge_guard ingress` (all ports, verified).
+  Per port, `edge_guard.py disable port` runs `unconfigure access-list edge_guard ports <p> ingress`,
+  **not yet verified in the lab**. `configure access-list delete …` only works for dynamic ACLs.
 - **IGMP snooping:** the User Guide 33.1.1 (p. 800-801) warns that an ACL with a MAC condition breaks
   IGMP snooping. On EXOS-VM **it does not reproduce**, but it is not verified on hardware. This policy
   uses no MAC conditions.
